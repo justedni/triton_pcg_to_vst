@@ -269,9 +269,6 @@ KorgPCG* LoadTritonPCG(const char* file, EnumKorgModel& out_model) {
 	if (memcmp(filehead, TritonPCGHeader, kKorgHeaderSize) == 0)
 	{
 		out_model = EnumKorgModel::KORG_TRITON;
-		fprintf(stderr, "Input file \"%s\" is not a valid Triton PCG (bad header).\n", file);
-		fclose(infile);
-		return NULL;
 	}
 	else if (memcmp(filehead, TritonExtremePCGHeader, kKorgHeaderSize) == 0)
 	{
