@@ -136,11 +136,13 @@
     <ClCompile Include="pcg_converter_programs.cpp" />
     <ClCompile Include="pcg_converter.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="unit_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="alchemist.h" />
     <ClInclude Include="helpers.h" />
     <ClInclude Include="pcg_converter.h" />
+    <ClInclude Include="unit_tests.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Templates\Extreme_Combi.patch">

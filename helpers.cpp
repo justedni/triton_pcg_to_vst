@@ -10,8 +10,6 @@
 
 #include "alchemist.h"
 
-#include "include/nlohmann/json.hpp"
-
 std::vector<BankDef> Helpers::bank_definitions = {
 	{ 0, 0, 0x0000, "A" },
 	{ 1, 1, 0x0001, "B" },
@@ -131,31 +129,40 @@ std::string Helpers::getUniqueId(std::string bankLetter, int presetId)
 	return ss.str();
 }
 
-std::string Helpers::createSubfolders(const std::string& destFolder, const std::string& subFolder, const std::string& bankLetter)
+void Helpers::createFolder(const std::string& path)
 {
 	namespace fs = std::filesystem;
 
-	auto create = [](auto& folder)
+	if (!fs::is_directory(path) || !fs::exists(path))
 	{
-		if (!fs::is_directory(folder) || !fs::exists(folder))
-		{
-			fs::create_directory(folder);
-		}
-	};
+		fs::create_directory(path);
+	}
+}
 
-	create(destFolder);
+std::string Helpers::createSubfolders(const std::string& destFolder, const std::string& subFolder, const std::string& bankLetter)
+{
+	createFolder(destFolder);
 
 	auto basePath = destFolder;
 	if (!basePath.empty() && *basePath.rbegin() != '\\')
 		basePath += '\\';
 
 	auto combiFolder = basePath + "\\" + subFolder;
-	create(combiFolder);
+	createFolder(combiFolder);
 
 	std::ostringstream oss;
 	oss << basePath << subFolder << "\\USER-" << bankLetter << "\\";
 	auto userFolder = oss.str();
-	create(userFolder);
+	createFolder(userFolder);
 
 	return userFolder;
 }
+
+bool Helpers::isIgnoredParam(const std::string& paramName)
+{
+	return (paramName.find("user_drumkit_parameter") != std::string::npos
+		|| paramName.find("arpeggiator_parameter") != std::string::npos
+		|| paramName.find("user_arp") != std::string::npos
+		);
+}
+

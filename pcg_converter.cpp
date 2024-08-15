@@ -5,6 +5,12 @@
 
 #include <sstream>
 #include <iostream>
+#include <iomanip>
+#include <array>
+#include <format>
+
+#include "include/rapidjson/document.h"
+#include "include/rapidjson/istreamwrapper.h"
 
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
 
@@ -18,54 +24,58 @@ PCG_Converter::PCG_Converter(
 {
 	retrieveTemplatesData();
 	retrieveProgramNamesList();
+	initEffectConversions();
 }
 
-PCG_Converter::PCG_Converter(
-	EnumKorgModel model)
-	: m_model(model)
-	, m_pcg(nullptr)
-	, m_destFolder("..\\UnitTest\\")
+PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destFolder)
+	: m_model(other.m_model)
+	, m_pcg(other.m_pcg)
+	, m_destFolder(destFolder)
 {
-	retrieveTemplatesData();
+	m_dictProgParams = other.m_dictProgParams;
+	m_dictCombiParams = other.m_dictCombiParams;
+	m_mapProgramsNames = other.m_mapProgramsNames;
 }
 
 void PCG_Converter::retrieveTemplatesData()
 {
-	using namespace nlohmann;
-
 	auto parse = [](auto& path, auto& target)
 	{
-		std::ifstream f(path);
-		if (!f.is_open())
+		std::ifstream ifs(path);
+		if (!ifs.is_open())
 		{
 			std::cerr << "Template " << path << " not found!!\n";
-			assert(f.is_open());
+			assert(ifs.is_open());
 		}
-		
-		target = json::parse(f);
+
+		rapidjson::IStreamWrapper refisw{ ifs };
+		target.ParseStream(refisw);
 	};
+
+	rapidjson::Document templateProgDoc;
+	rapidjson::Document templateCombiDoc;
 
 	if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
 	{
-		parse("Extreme_Program.patch", m_templateProg);
-		parse("Extreme_Combi.patch", m_templateCombi);
+		parse("Extreme_Program.patch", templateProgDoc);
+		parse("Extreme_Combi.patch", templateCombiDoc);
 	}
 	else
 	{
-		parse("Triton_Program.patch", m_templateProg);
-		parse("Triton_Combi.patch", m_templateCombi);
+		parse("Triton_Program.patch", templateProgDoc);
+		parse("Triton_Combi.patch", templateCombiDoc);
 	}
 
-	auto& progDspSettings = m_templateProg["dsp_settings"];
+	auto progDspSettings = templateProgDoc["dsp_settings"].GetArray();
 	for (auto& setting: progDspSettings)
 	{
-		m_dictProgParams.emplace_back(setting["index"].get<int>(), setting["key"], setting["value"].get<int>());
+		m_dictProgParams.emplace_back(setting["index"].GetInt(), setting["key"].GetString(), setting["value"].GetInt());
 	}
 
-	auto& combiDspSettings = m_templateCombi["dsp_settings"];
+	auto combiDspSettings = templateCombiDoc["dsp_settings"].GetArray();
 	for (auto& setting : combiDspSettings)
 	{
-		m_dictCombiParams.emplace_back(setting["index"].get<int>(), setting["key"], setting["value"].get<int>());
+		m_dictCombiParams.emplace_back(setting["index"].GetInt(), setting["key"].GetString(), setting["value"].GetInt());
 	}
 }
 
@@ -162,45 +172,80 @@ void PCG_Converter::convertCombis(const std::vector<std::string>& letters)
 	}
 }
 
-struct twoBits
-{
-	char d : 2;
-};
-
 template<typename T>
-int getBits(void* data, int offset, int bitstart, int bitend)
+T getBits_Impl(void* data, int offset, int bitstart, int bitend)
 {
+	assert(bitend >= bitstart);
 	T* s = (T*)data + offset;
 	unsigned bitmask = (1 << (bitend - bitstart + 1)) - 1;
 	return (T)((*s >> bitstart) & bitmask);
 }
 
-int getBits(TritonStruct::EVarType type, void* data, int offset, int bitstart, int bitend)
+short getBits(EVarType type, void* data, int offset, int bitstart, int bitend)
 {
-	if (type == TritonStruct::EVarType::Signed)
-		return getBits<char>(data, offset, bitstart, bitend);
+	if (type == EVarType::Signed)
+		return getBits_Impl<char>(data, offset, bitstart, bitend);
 	else
-		return getBits<unsigned char>(data, offset, bitstart, bitend);
+		return getBits_Impl<unsigned char>(data, offset, bitstart, bitend);
+}
+
+struct twoBits { char d : 2; };
+struct threeBits { char d : 3; };
+struct fourBits { char d : 4; };
+struct fiveBits { char d : 5; };
+struct sixBits { char d : 6; };
+struct sevenBits { char d : 7; };
+
+template<typename S, typename T>
+T convertOddValue(T result)
+{
+	S temp = static_cast<S>(result);
+	return static_cast<T>(temp.d);
+}
+
+template<typename T>
+T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
+{
+	T result = getBits(info.varType, data, info.pcgOffset, info.pcgBitStart, info.pcgBitEnd);
+
+	auto numBits = info.pcgBitEnd - info.pcgBitStart + 1;
+	if (info.pcgLSBOffset >= 0)
+	{
+		short bitShift = (info.pcgLSBBitEnd - info.pcgLSBBitStart + 1);
+		result <<= bitShift;
+
+		T lsbVal = static_cast<T>(getBits(info.varType, data, info.pcgLSBOffset, info.pcgLSBBitStart, info.pcgLSBBitEnd));
+		result |= (T)lsbVal;
+
+		numBits += (info.pcgLSBBitEnd - info.pcgLSBBitStart + 1);
+	}
+
+	// Convert values with odd num bits
+	if (info.varType == EVarType::Signed)
+	{
+		if (numBits == 2)
+			result = convertOddValue<twoBits>(result);
+		else if (numBits == 3)
+			result = convertOddValue<threeBits>(result);
+		else if (numBits == 4)
+			result = convertOddValue<fourBits>(result);
+		else if (numBits == 5)
+			result = convertOddValue<fiveBits>(result);
+		else if (numBits == 6)
+			result = convertOddValue<sixBits>(result);
+		else if (numBits == 7)
+			result = convertOddValue<sevenBits>(result);
+	}
+
+	return result;
 }
 
 int PCG_Converter::getPCGValue(unsigned char* data, TritonStruct& info)
 {
-	int result = getBits(info.varType, data, info.pcgOffset, info.pcgBitStart, info.pcgBitEnd);
-
-	// Signed 2-bit values
-	if ((info.pcgBitEnd - info.pcgBitStart == 1) && info.pcgLSBOffset == -1 && info.varType == TritonStruct::EVarType::Signed)
-	{
-		twoBits temp = static_cast<twoBits>(result);
-		result = static_cast<int>(temp.d);
-	}
-
-	if (info.pcgLSBOffset >= 0)
-	{
-		result <<= info.pcgMSBBitShift;
-		result += getBits(info.varType, data, info.pcgLSBOffset, info.pcgLSBBitStart, info.pcgLSBBitEnd);
-	}
-
-	return result;
+	if (info.varType == EVarType::Signed)
+		return getPCGValue_Impl<int>(data, info);
+	else
+		return getPCGValue_Impl<unsigned int>(data, info);
 }
 
 void PCG_Converter::jsonWriteHeaderBegin(std::ofstream& json, const std::string& presetName)
@@ -275,6 +320,7 @@ void PCG_Converter::patchProgramToJson(int bankId, int presetId, const std::stri
 
 	auto& content = m_dictProgParams;
 	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
+	patchProgramUnusedValues(content, "prog_");
 	jsonWriteDSPSettings(json, content);
 
 	jsonWriteEnd(json, "program");
@@ -282,11 +328,13 @@ void PCG_Converter::patchProgramToJson(int bankId, int presetId, const std::stri
 
 void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix)
 {
-	auto found = std::find_if(effect_conversions.begin(), effect_conversions.end(), [&effectId](auto& e)
-		{ return e.id == effectId; });
-	if (found != effect_conversions.end())
+	if (effectId == 0) // No effect
+		return;
+
+	auto foundEntry = effect_conversions.find(effectId);
+	if (foundEntry != effect_conversions.end())
 	{
-		for (auto& spec_conv : found->conversions)
+		for (const auto& spec_conv : foundEntry->second)
 		{
 			if (spec_conv.jsonParam.empty())
 				continue;
@@ -296,13 +344,18 @@ void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffse
 			if (info.pcgLSBOffset != -1)
 				info.pcgLSBOffset += dataOffset;
 
+			auto jsonName = utils::string_format("%s_specific_parameter_%s", prefix.c_str(), spec_conv.jsonParam.c_str());
 			auto pcgVal = getPCGValue(data, info);
-			auto jsonName = utils::string_format("%s_%s", prefix.c_str(), spec_conv.jsonParam.c_str());
 
 			auto found = std::find_if(content.begin(), content.end(), [&jsonName](auto& e) { return e.key == jsonName; });
 			assert(found != content.end());
 			found->value = pcgVal;
 		}
+	}
+	else
+	{
+		auto msg = std::format(" Unhandled effect {} \n", effectId);
+		std::cout << msg;
 	}
 }
 
@@ -311,6 +364,122 @@ void PCG_Converter::patchValue(PCG_Converter::ParamList& content, const std::str
 	auto found = std::find_if(content.begin(), content.end(), [&jsonName](auto& e) { return e.key == jsonName; });
 	assert(found != content.end());
 	found->value = value;
+}
+
+void PCG_Converter::patchCombiUnusedValues(PCG_Converter::ParamList& content, const std::string& prefix)
+{
+	struct NameValue { std::string name; int value; };
+
+	std::vector<NameValue> ignoredParams =
+	{
+		{ "arpeggiator_gate_control", 0 },
+		{ "arpeggiator_velocity_control", 0 },
+		{ "arpeggiator_tempo", 40 },
+		{ "arpeggiator_switch", 0 },
+		{ "arpeggiator_pattern_no.", 0 },
+		{ "arpeggiator_resolution", 0 },
+		{ "arpeggiator_octave", 0 },
+		{ "arpeggiator_gate", 0 },
+		{ "arpeggiator_velocity", 1 },
+		{ "arpeggiator_swing", 0 },
+		{ "arpeggiator_sort_onoff", 0 },
+		{ "arpeggiator_latch_onoff", 0 },
+		{ "arpeggiator_keysync_onoff", 0 },
+		{ "arpeggiator_keyboard_onoff", 0 },
+		{ "arpeggiator_top_key", 0 },
+		{ "arpeggiator_bottom_key", 0 },
+		{ "arpeggiator_top_velocity", 1 },
+		{ "arpeggiator_bottom_velocity", 1 },
+		{ "osc_1_low_start_offset", 0 },
+		{ "osc_2_low_start_offset", 0 },
+		{ "knob1", 0 },
+		{ "knob2", 0 },
+		{ "knob3", 0 },
+		{ "knob4", 0 },
+	};
+
+	for (auto& param : content)
+	{
+		for (auto& ignoredParam : ignoredParams)
+		{
+			std::string fullParamName = prefix + ignoredParam.name;
+			if (param.key == fullParamName)
+			{
+				param.value = ignoredParam.value;
+			}
+		}
+	}
+}
+
+void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, const std::string& prefix)
+{
+	struct NameValue { std::string name; int value; };
+
+	struct ProgramPatch
+	{
+		NameValue param;
+		std::vector<NameValue> paramsToUpdate;
+	};
+
+	auto fullParamName = [&](auto& name)
+	{
+		return prefix + name;
+	};
+
+	std::vector<ProgramPatch> allPatches =
+	{
+		{ { "common_oscillator_mode", 2 }, {{ "osc_1_output_use_drum_kit_setting", 1 }} },
+
+		{ { "osc_1_lfo_1_miditempo_sync", 0 }, {{ "osc_1_lfo_1_times", 0 }} },
+		{ { "osc_1_lfo_2_miditempo_sync", 0 }, {{ "osc_1_lfo_2_times", 0 }} },
+		{ { "osc_2_lfo_1_miditempo_sync", 0 }, {{ "osc_2_lfo_1_times", 0 }} },
+		{ { "osc_2_lfo_2_miditempo_sync", 0 }, {{ "osc_2_lfo_2_times", 0 }} },
+	};
+
+	for (auto& param : content)
+	{
+		for (auto& patch : allPatches)
+		{
+			if (param.key == fullParamName(patch.param.name) && param.value == patch.param.value)
+			{
+				for (auto& paramToUpdate : patch.paramsToUpdate)
+				{
+					std::string targetName = fullParamName(paramToUpdate.name);
+					auto found = std::find_if(content.begin(), content.end(), [&targetName](auto& e) { return e.key == targetName; });
+					assert(found != content.end());
+					found->value = paramToUpdate.value;
+				}
+			}
+		}
+
+		// Patching knobs default value
+		for (int i = 1; i <= 4; i++)
+		{
+			std::string paramName;
+			if (prefix.find("combi_") != std::string::npos)
+				paramName = utils::string_format("%sknob%d_assign_type", prefix.c_str(), i);
+			else
+				paramName = utils::string_format("%scommon_knob%d_assign_type", prefix.c_str(), i);
+
+			if (param.key == paramName) // 0:Off; 1-4: Assignable Knob; 5+: assigned params
+			{
+				std::string targetName = utils::string_format("%sknob%d", prefix.c_str(), i);
+				auto found = std::find_if(content.begin(), content.end(), [&targetName](auto& e) { return e.key == targetName; });
+				assert(found != content.end());
+
+				if (param.value == 6) // Portamento time
+					found->value = 0;
+				else if (param.value == 10) // Expression
+					found->value = 127;
+				else if (param.value == 11 || param.value == 12) // FX Control 1/2
+					found->value = 0;
+				else if (param.value == 27 || param.value == 28) // MFX Send
+					found->value = 0;
+				else if (param.value > 4)
+					found->value = 64;
+			}
+		}
+	}
 }
 
 void PCG_Converter::patchSharedConversions(PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data)
@@ -376,15 +545,18 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 	{
 		patchSharedConversions(content, prefix, data);
 
-		for (auto& conversion : triton_extreme_prog_conversions)
+		if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
 		{
-			if (conversion.jsonParam.empty())
-				continue;
+			for (auto& conversion : triton_extreme_conversions)
+			{
+				if (conversion.jsonParam.empty())
+					continue;
 
-			auto pcgVal = getPCGValue(data, conversion);
-			auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
+				auto pcgVal = getPCGValue(data, conversion);
+				auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
 
-			patchValue(content, jsonName, pcgVal);
+				patchValue(content, jsonName, pcgVal);
+			}
 		}
 	}
 
@@ -434,7 +606,7 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 
 	patchSharedConversions(content, "combi_", data);
 
-	for (auto& conversion : triton_extreme_combi_conversions)
+	for (auto& conversion : triton_extreme_conversions)
 	{
 		if (conversion.jsonParam.empty())
 			continue;
@@ -463,6 +635,10 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 			}
 			
 			auto pcgVal = getPCGValue(data, timbreInfo);
+
+			if (conversion.optionalConverter)
+				pcgVal = conversion.optionalConverter(pcgVal, jsonName, data);
+
 			patchValue(content, jsonName, pcgVal);
 
 			if (conversion.jsonParam.find("program_no") != std::string::npos)
@@ -475,6 +651,9 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 			}
 		}
 	}
+
+	// Global fields to patch (IFX...)
+	patchProgramUnusedValues(content, "combi_");
 
 	std::vector<Timber> timbersToWrite;
 
@@ -499,6 +678,8 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 
 			auto prefix = utils::string_format("combi_timbre_%d_", iTimber + 1);
 			patchInnerProgram(content, prefix, progItem->data, depProgName, EPatchMode::Combi);
+			patchProgramUnusedValues(content, prefix);
+			patchCombiUnusedValues(content, prefix);
 		}
 
 		iTimber++;
@@ -514,72 +695,4 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 	jsonWriteDSPSettings(json, content);
 
 	jsonWriteEnd(json, "combi");
-}
-
-bool PCG_Converter::unitTest(EnumKorgModel model, const std::string& inPCGBinName, const std::string& inVSTRefName)
-{
-	const auto unitTestFolder = std::string("..\\..\\UnitTest\\");
-	auto pcgPath = unitTestFolder + inPCGBinName;
-	std::ifstream file(pcgPath, std::ios::in | std::ios::binary | std::ios::ate);
-	assert(file.is_open());
-
-	std::streamsize fileSize = file.tellg();
-	file.seekg(0, std::ios::beg);
-
-	std::vector<char> buffer(fileSize);
-	auto& st = file.read(buffer.data(), fileSize);
-	assert(st);
-
-	char* data = buffer.data();
-	auto name = std::string((char*)data, 16);
-
-	auto converter = PCG_Converter(EnumKorgModel::KORG_TRITON_EXTREME);
-	converter.patchProgramToJson(0, 0, name, (unsigned char*)data, unitTestFolder, "A");
-
-	bool bErrors = false;
-
-	auto parseJson = [](auto path)
-	{
-		std::ifstream f(path);
-		if (!f.is_open())
-		{
-			std::cerr << "Reference path " << path << " not found!!\n";
-			assert(f.is_open());
-		}
-
-		return nlohmann::json::parse(f);
-	};
-
-	auto refPath = unitTestFolder + inVSTRefName;
-	auto leftJson = parseJson(refPath);
-	auto generatedPath = unitTestFolder + "000.patch";
-	auto rightJson = parseJson(generatedPath);
-
-	auto& left_settings = leftJson["dsp_settings"];
-	auto& right_settings = rightJson["dsp_settings"];
-
-	int paramId = 0;
-	for (auto& param : left_settings)
-	{
-		auto leftIndex = param["index"].get<int>();
-		auto leftName = param["key"];
-		auto leftVal = param["value"].get<int>();
-
-		auto rightParam = right_settings[paramId];
-		auto rightIndex = rightParam["index"].get<int>();
-		auto rightName = rightParam["key"];
-		auto rightVal = rightParam["value"].get<int>();
-		if (leftVal != rightVal)
-		{
-			std::cerr << "\terror: Param " << param["key"] << ": " << leftVal << " != " << rightVal << "\n";
-			bErrors = true;
-			assert(false);
-		}
-
-		paramId++;
-	}
-
-	std::remove(generatedPath.c_str());
-
-	return !bErrors;
 }

@@ -43,7 +43,23 @@ public:
 
 	static std::string getUniqueId(std::string bankLetter, int presetId);
 
+	static void createFolder(const std::string& path);
 	static std::string createSubfolders(const std::string& destFolder, const std::string& subFolder, const std::string& bankLetter);
+
+	static bool isIgnoredParam(const std::string& paramName);
+	static bool isIgnoredIFXParamForUnitTest(const std::string& paramName, int ifxId, bool ifxState);
+
+	template<typename F>
+	static BankDef* findBankDef(F func)
+	{
+		auto found = std::find_if(bank_definitions.begin(), bank_definitions.end(), func);
+		if (found != bank_definitions.end())
+		{
+			return &(*found);
+		}
+
+		return nullptr;
+	}
 
 private:
 	static std::vector<BankDef> bank_definitions;

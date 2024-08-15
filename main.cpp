@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "unit_tests.h"
+
 using string_map = std::unordered_map<std::string, std::vector<std::string>>;
 template <class Keyword>
 string_map generic_parse(std::vector<std::string> as, Keyword keyword)
@@ -30,29 +32,6 @@ string_map generic_parse(std::vector<std::string> as, Keyword keyword)
 		}
 	}
 	return result;
-}
-
-void doUnitTests()
-{
-	struct Test
-	{
-		EnumKorgModel model;
-		std::string left;
-		std::string right;
-	};
-
-	std::vector<Test> tests = {
-		{ EnumKorgModel::KORG_TRITON_EXTREME, "PCG_Extreme_Prog_A000.bin", "VST_Extreme_Prog_A000.patch"}
-	};
-
-	for (auto& test : tests)
-	{
-		std::cout << "Unit Test: " << test.left << " and " << test.right << "\n";
-		bool bSuccess = PCG_Converter::unitTest(test.model, test.left, test.right);
-
-		if (!bSuccess) std::cerr << "...Failed!\n";
-		else std::cout << "...Success!\n";
-	}
 }
 
 void printUsage()

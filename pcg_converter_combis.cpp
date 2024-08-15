@@ -1,7 +1,7 @@
 #include "pcg_converter.h"
 
 std::vector<TritonStruct> PCG_Converter::combi_conversions = {
-	{ "  Category"									, "combi_category", 214, 0, 3 },
+	{ "  Category"									, "combi_category", 214, 0, 3, EVarType::Unsigned },
 	{ "Scale  Scale Type"							, "combi_scale_type", 215, 0, 7 },
 	{ "Scale  Scale Key"							, "combi_scale_key", 216, 0, 7 },
 	{ "Scale  Random"								, "combi_random_intensity", 217, 0, 7 },
@@ -18,15 +18,18 @@ std::vector<TritonStruct> PCG_Converter::combi_conversions = {
 	{ "Realtime Control Konbs B-Assign  Realtime Contols", "", 220, 7, 7 },
 	{ "  MOSS Bus Select"							, "", 214, 4, 7 },
 
-	{ "Arpeggiator Play  Tempo"				, "combi_arpeggiator_tempo", 192, 0, 7 },
-	{ "Arpeggiator Play  Switch"			, "", 193, 0, 0 },
+	{ " Gate Control"						, "combi_arpeggiator_gate_control", 190, 0, 7, EVarType::Signed },
+	{ " Velocity Control"					, "combi_arpeggiator_velocity_control", 191, 0, 7, EVarType::Signed },
+	{ "Arpeggiator Play  Tempo"				, "combi_arpeggiator_tempo", 192, 0, 7, EVarType::Unsigned },
+	{ "Arpeggiator Play  Switch"			, "combi_arpeggiator_switch", 193, 0, 0 },
 	{ "Arpeggiator Play Arpeggiator Run A"	, "combi_arpeggiator_run_a", 193, 1, 1 },
 	{ "Arpeggiator Play Arpeggiator Run "	, "combi_arpeggiator_run_b", 193, 2, 2 },
-	{ "Arpeggiator A  Pattern"				, "combi_arpeggiator_a_pattern_no.", 195, 0, 1, 194, 0, 7, 3, TritonStruct::EVarType::Unsigned },
+
+	{ "Arpeggiator A  Pattern"				, "combi_arpeggiator_a_pattern_no.", 195, 5, 7, EVarType::Unsigned, 194, 0, 7},
 	{ "Arpeggiator A  Resolution"			, "combi_arpeggiator_a_resolution", 195, 2, 4 },
-	{ "Arpeggiator A  Octave"				, "combi_arpeggiator_a_octave", 195, 0, 1 },
+	{ "Arpeggiator A  Octave"				, "combi_arpeggiator_a_octave", 195, 0, 1, EVarType::Unsigned },
 	{ "Arpeggiator A  Gate"					, "combi_arpeggiator_a_gate", 196, 0, 7 },
-	{ "Arpeggiator A  Velocity"				, "combi_arpeggiator_a_velocity", 197, 0, 7, -1, -1, -1, 8, TritonStruct::EVarType::Unsigned },
+	{ "Arpeggiator A  Velocity"				, "combi_arpeggiator_a_velocity", 197, 0, 7, EVarType::Unsigned },
 	{ "Arpeggiator A  Swing"				, "combi_arpeggiator_a_swing", 198, 0, 7 },
 	{ "Arpeggiator A  Sort"					, "combi_arpeggiator_a_sort_onoff", 199, 0, 0 },
 	{ "Arpeggiator A  Latch"				, "combi_arpeggiator_a_latch_onoff", 199, 1, 1 },
@@ -36,11 +39,11 @@ std::vector<TritonStruct> PCG_Converter::combi_conversions = {
 	{ "Arpeggiator A  Bottom Key"			, "combi_arpeggiator_a_bottom_key", 201, 0, 7 },
 	{ "Arpeggiator A  Top Velocity"			, "combi_arpeggiator_a_top_velocity", 202, 0, 7 },
 	{ "Arpeggiator A  Bottom Velocity"		, "combi_arpeggiator_a_bottom_velocity", 203, 0, 7 },
-	{ "Arpeggiator B  Pattern"				, "combi_arpeggiator_b_pattern_no.", 205, 0, 1, 204, 0, 7, 3, TritonStruct::EVarType::Unsigned },
+	{ "Arpeggiator B  Pattern"				, "combi_arpeggiator_b_pattern_no.", 205, 5, 7, EVarType::Unsigned, 204, 0, 7},
 	{ "Arpeggiator B  Resolution"			, "combi_arpeggiator_b_resolution", 205, 2, 4 },
-	{ "Arpeggiator B  Octave"				, "combi_arpeggiator_b_octave", 205, 0, 1 },
+	{ "Arpeggiator B  Octave"				, "combi_arpeggiator_b_octave", 205, 0, 1, EVarType::Unsigned },
 	{ "Arpeggiator B  Gate"					, "combi_arpeggiator_b_gate", 206, 0, 7 },
-	{ "Arpeggiator B  Velocity"				, "combi_arpeggiator_b_velocity", 207, 0, 7, -1, -1, -1, 8, TritonStruct::EVarType::Unsigned },
+	{ "Arpeggiator B  Velocity"				, "combi_arpeggiator_b_velocity", 207, 0, 7, EVarType::Unsigned },
 	{ "Arpeggiator B  Swing"				, "combi_arpeggiator_b_swing", 208, 0, 7 },
 	{ "Arpeggiator B  Sort"					, "combi_arpeggiator_b_sort_onoff", 209, 0, 0 },
 	{ "Arpeggiator B  Latch"				, "combi_arpeggiator_b_latch_onoff", 209, 1, 1 },
@@ -57,20 +60,26 @@ std::vector<SubParam> PCG_Converter::combi_timbres = {
 	{ 5, 336 }, { 6, 364 }, { 7, 392 }, { 8, 420 }
 };
 
+int convertProgBank(int bankId, const std::string& paramName, unsigned char* data)
+{
+	// TODO
+	return bankId;
+}
+
 std::vector<TritonStruct> PCG_Converter::combi_timbre_conversions = {
-	{ "Program No"						, "program_no", 0, 0, 7 },
-	{ "Program Bank"					, "program_bank", 1, 0, 7 },
+	{ "Program No"						, "program_no", 0, 0, 7, EVarType::Unsigned },
+	{ "Program Bank"					, "program_bank", 1, 0, 7, EVarType::Unsigned, -1, -1, -1, convertProgBank },
 	{ "Pan"								, "pan", 11, 0, 7 },
 	{ "Volume"							, "volume", 5, 0, 7 },
 	{ "MIDI Status"						, "status", 2, 5, 7 },
-	{ "MIDI Channel"					, "midi_channel", 2, 0, 4 },
-	{ "Bank Select MSB"					, "", 3, 0, 7 },
-	{ "Bank Select LSB"					, "", 4, 0, 7 },
+	{ "MIDI Channel"					, "midi_channel", 2, 0, 4, EVarType::Unsigned },
+	//{ "Bank Select MSB"					, "", 3, 0, 7 },
+	//{ "Bank Select LSB"					, "", 4, 0, 7 },
 	{ "Force OSC Mode"					, "force_osc_mode", 19, 0, 1 },
-	{ "OSC Select"						, "osc_mode", 19, 2, 3 },
+	{ "OSC Select"						, "osc_mode", 19, 2, 3, EVarType::Unsigned },
 	{ "Portamento Time"					, "portamento_time", 20, 0, 7 },
 	{ "Transpose"						, "transpose", 7, 0, 7 },
-	{ "Detune"							, "detune", 8, 0, 7 },
+	{ "Detune"							, "detune", 9, 0, 7 },
 	{ "Pitch Bend Range"				, "pitch_bend_range", 6, 0, 7 },
 	{ "Delay Start"						, "delay_start", 10, 0, 7 },
 	{ "Use Program's Scale"				, "use_program's_scale", 19, 6, 6 },
@@ -96,16 +105,16 @@ std::vector<TritonStruct> PCG_Converter::combi_timbre_conversions = {
 	{ "Key Zone Key Bottom"				, "key_zone_bottom", 22, 0, 7 },
 	{ "Velocity Zone Velocity Top"		, "velocity_zone_top", 24, 0, 7 },
 	{ "Velocity Zone Slope Top"			, "velocity_zone_top_slope", 26, 0, 3 },
-	{ "Velocity Zone Slope Bottom"		, "velocity_zone_bottom_slope", 26, 4, 7 },
+	{ "Velocity Zone Slope Bottom"		, "velocity_zone_bottom_slope", 26, 4, 7, EVarType::Unsigned },
 	{ "Velocity Zone Velocity Bottom"	, "velocity_zone_bottom", 25, 0, 7 },
-	{ "Arpeggiator Assign"				, "arpeggiator_assign", 19, 4, 5 },
+	{ "Arpeggiator Assign"				, "arpeggiator_assign", 19, 4, 5, EVarType::Unsigned },
 	{ "Bus Select"						, "bus_select", 16, 0, 7 },
 	{ "Send 1 (MFX)"					, "send_1_level", 12, 0, 7 },
 	{ "Send 2 (MFX)"					, "send_2_level", 13, 0, 7 },
-	{ "IFX1 Patch"						, "drum_kit_ifx_1_patch", 15, 0, 2 },
-	{ "IFX2 Patch"						, "drum_kit_ifx_2_patch", 15, 3, 5 },
-	{ "IFX3 Patch"						, "drum_kit_ifx_3_patch", 15, 6, 8 },
-	{ "IFX4 Patch"						, "drum_kit_ifx_4_patch", 14, 0, 2 },
-	{ "IFX5 Patch"						, "drum_kit_ifx_5_patch", 14, 3, 5 },
+	{ "IFX1 Patch"						, "drum_kit_ifx_1_patch", 15, 0, 2, EVarType::Unsigned },
+	{ "IFX2 Patch"						, "drum_kit_ifx_2_patch", 15, 3, 5, EVarType::Unsigned },
+	{ "IFX3 Patch"						, "drum_kit_ifx_3_patch", 14, 0, 0, EVarType::Unsigned, 15, 6, 7 },
+	{ "IFX4 Patch"						, "drum_kit_ifx_4_patch", 14, 1, 3, EVarType::Unsigned },
+	{ "IFX5 Patch"						, "drum_kit_ifx_5_patch", 14, 4, 6, EVarType::Unsigned },
 	{ "MOSS Voice Allocation Reserve"	, "", 27, 0, 7 },
 };

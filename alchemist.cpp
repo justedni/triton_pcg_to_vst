@@ -309,12 +309,6 @@ KorgPCG* LoadTritonPCG(const char* file, EnumKorgModel& out_model) {
 	buflen = ftell(infile) - l;
 	fseek(infile, l, SEEK_SET);
 
-	if (PCGChunk.size != buflen) {
-		fprintf(stderr, "Input file \"%s\" is not a valid PCG (incorrect size).\n", file);
-		fclose(infile);
-		return NULL;
-	}
-
 	PCGChunk.data = (unsigned char*)malloc(buflen);
 	PCGChunk.dataowner = 1;
 	fread(PCGChunk.data, PCGChunk.size, 1, infile);

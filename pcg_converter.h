@@ -4,28 +4,27 @@
 #include <string>
 #include <thread>
 #include <assert.h>
-
-#include "include/nlohmann/json.hpp"
+#include <functional>
+#include <map>
 
 struct KorgPCG;
 struct KorgBank;
 enum class EnumKorgModel : uint8_t;
 enum class EPatchMode : uint8_t;
+enum class EVarType : uint8_t { Signed, Unsigned };
 
 struct TritonStruct
 {
-	enum class EVarType { Signed, Unsigned };
-
 	std::string desc;
 	std::string jsonParam;
 	int pcgOffset;
 	int pcgBitStart;
 	int pcgBitEnd;
+	EVarType varType = EVarType::Signed;
+
 	int pcgLSBOffset = -1;
 	int pcgLSBBitStart = -1;
 	int pcgLSBBitEnd = -1;
-	int pcgMSBBitShift = 8;
-	EVarType varType = EVarType::Signed;
 
 	std::function<int(int val, const std::string&, unsigned char*)> optionalConverter;
 };
@@ -36,14 +35,6 @@ struct SubParam
 	int startOffset = 0;
 };
 
-struct IfxType
-{
-	int id = 0;
-	std::string name;
-	std::vector<TritonStruct> conversions;
-};
-
-
 class PCG_Converter
 {
 public:
@@ -51,6 +42,8 @@ public:
 		EnumKorgModel model,
 		KorgPCG* pcg,
 		const std::string destFolder);
+
+	PCG_Converter(const PCG_Converter& other, const std::string destFolder);
 
 	void convertPrograms(const std::vector<std::string>& letters);
 	void convertCombis(const std::vector<std::string>& letters);
@@ -75,19 +68,21 @@ public:
 
 	static int getPCGValue(unsigned char* data, TritonStruct& info);
 
-	static bool unitTest(EnumKorgModel model, const std::string& inPCGBinName, const std::string& inVSTRefName);
 private:
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
 
 	typedef std::vector<ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
-	void patchSharedConversions(PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data);
+	void patchSharedConversions(ParamList& content, const std::string& prefix, unsigned char* data);
 	void patchEffect(ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix);
 
 	KorgBank* findDependencyBank(KorgPCG* pcg, int depBank);
 
-	void patchValue(PCG_Converter::ParamList& content, const std::string& jsonName, int value);
+	void patchValue(ParamList& content, const std::string& jsonName, int value);
+
+	void patchCombiUnusedValues(PCG_Converter::ParamList& content, const std::string& prefix);
+	void patchProgramUnusedValues(ParamList& content, const std::string& prefix);
 
 	struct Timber
 	{
@@ -103,16 +98,10 @@ private:
 	static void jsonWriteDSPSettings(std::ofstream& json, const ParamList& content);
 	static void jsonWriteTimbers(std::ofstream& json, const std::vector<Timber>& timbers);
 
-	// For unit tests:
-	PCG_Converter(EnumKorgModel model);
-
-	// Members
 	const EnumKorgModel m_model;
 	KorgPCG* m_pcg = nullptr;
 	const std::string m_destFolder;
 
-	nlohmann::json m_templateProg;
-	nlohmann::json m_templateCombi;
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;
 
@@ -121,13 +110,13 @@ private:
 	static std::vector<TritonStruct> shared_conversions;
 
 	static std::vector<TritonStruct> program_conversions;
-	static std::vector<TritonStruct> triton_extreme_prog_conversions;
-	static std::vector<TritonStruct> triton_extreme_combi_conversions;
+	static std::vector<TritonStruct> triton_extreme_conversions;
 	static std::vector<TritonStruct> program_osc_conversions;
 	static std::vector<SubParam> program_ifx_offsets;
 	static std::vector<TritonStruct> program_ifx_conversions;
 
-	static std::vector<IfxType> effect_conversions;
+	static std::map<int, std::vector<TritonStruct>> effect_conversions;
+	static void initEffectConversions();
 
 	static std::vector<TritonStruct> combi_conversions;
 	static std::vector<SubParam> combi_timbres;
