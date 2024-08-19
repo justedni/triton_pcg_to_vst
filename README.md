@@ -17,11 +17,10 @@ I'm using local "unit tests" to constantly compare .patch files that I manually 
 Currently implemented:
 - Program conversions
 - Combi conversions
-- IFX and MFX (WIP: the order of specific parameters is different for each of the 101 available effects, both in the PCG and the json)
 - Triton Extreme specific params (Valve Force)
 
-TODO:
-- Finish IFX and MFX (41% done)
+I'm working on:
+- Finishing IFX and MFX (41% done)
 - Global settings conversions
 - User arpeggiator
 - User drumkit
