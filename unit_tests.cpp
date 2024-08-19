@@ -166,6 +166,13 @@ bool UnitTest::perform()
 	rapidjson::Document generatedJson;
 	generatedJson.ParseStream(isw);
 
+	auto refPresetName = std::string(refJson["general_program_information"]["name"].GetString());
+	auto generatedPresetName = std::string(generatedJson["general_program_information"]["name"].GetString());
+
+	refPresetName.erase(std::remove_if(refPresetName.begin(), refPresetName.end(), ::isspace), refPresetName.end());
+	generatedPresetName.erase(std::remove_if(generatedPresetName.begin(), generatedPresetName.end(), ::isspace), generatedPresetName.end());
+	assert(refPresetName.compare(generatedPresetName.c_str()) == 0);
+
 	auto refParams = refJson["dsp_settings"].GetArray();
 	auto generatedParams = generatedJson["dsp_settings"].GetArray();
 

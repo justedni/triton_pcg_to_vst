@@ -21,7 +21,7 @@ Currently implemented:
 - Triton Extreme specific params (Valve Force)
 
 TODO:
-- Finish IFX and MFX (25% done)
+- Finish IFX and MFX (41% done)
 - Global settings conversions
 - User arpeggiator
 - User drumkit

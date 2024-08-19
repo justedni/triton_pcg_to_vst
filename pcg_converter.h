@@ -5,6 +5,7 @@
 #include <thread>
 #include <assert.h>
 #include <functional>
+#include <optional>
 #include <map>
 
 struct KorgPCG;
@@ -12,6 +13,13 @@ struct KorgBank;
 enum class EnumKorgModel : uint8_t;
 enum class EPatchMode : uint8_t;
 enum class EVarType : uint8_t { Signed, Unsigned };
+
+struct Byte
+{
+	int offset;
+	int bit_start;
+	int bit_end;
+};
 
 struct TritonStruct
 {
@@ -25,6 +33,8 @@ struct TritonStruct
 	int pcgLSBOffset = -1;
 	int pcgLSBBitStart = -1;
 	int pcgLSBBitEnd = -1;
+
+	std::optional<Byte> third;
 
 	std::function<int(int val, const std::string&, unsigned char*)> optionalConverter;
 };

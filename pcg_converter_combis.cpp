@@ -68,7 +68,7 @@ int convertProgBank(int bankId, const std::string& paramName, unsigned char* dat
 
 std::vector<TritonStruct> PCG_Converter::combi_timbre_conversions = {
 	{ "Program No"						, "program_no", 0, 0, 7, EVarType::Unsigned },
-	{ "Program Bank"					, "program_bank", 1, 0, 7, EVarType::Unsigned, -1, -1, -1, convertProgBank },
+	{ "Program Bank"					, "program_bank", 1, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertProgBank },
 	{ "Pan"								, "pan", 11, 0, 7 },
 	{ "Volume"							, "volume", 5, 0, 7 },
 	{ "MIDI Status"						, "status", 2, 5, 7 },

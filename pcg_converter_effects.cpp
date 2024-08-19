@@ -139,6 +139,83 @@ void PCG_Converter::initEffectConversions()
 		 { "Source"					, "10_24", 10, 0, 4, EVarType::Unsigned },
 		 { "Amt"					, "11_24", 11, 0, 7, EVarType::Signed } };
 
+	effect_conversions[9] = { // St. Wah/Auto Wah
+		{ "Frequency Bottom"		, "0_24", 1, 0, 3, EVarType::Unsigned },
+		{ "Frequency Top"			, "1_24", 0 , 0, 5, EVarType::Unsigned, 1, 7, 7 },
+		{ "Sweep Mode"				, "2_24", 0 , 6, 7, EVarType::Unsigned },
+		{ "Source"					, "3_24", 3 , 0, 3, EVarType::Unsigned },
+		{ "Response"				, "4_24", 4 , 0, 6, EVarType::Unsigned },
+		{ "Envelope Sens"			, "5_24", 13 , 1, 7, EVarType::Unsigned },
+		{ "Envelope Shape"			, "6_24", 5 , 0, 7, EVarType::Signed },
+		{ "LFO Freq"				, "7_24", 6 , 0, 7, EVarType::Unsigned },
+		{ "Source: multiple"		, "8_24", 2 , 0, 1, EVarType::Unsigned, 3, 5, 7},
+		{ "Amount: multiple"		, "9_24", 7 , 0, 6, EVarType::Unsigned},
+		{ "BPM Midi Sync"			, "10_24", 13 , 0, 0, EVarType::Unsigned},
+		{ "BPM"						, "11_24", 14 , 0, 6, EVarType::Unsigned },
+		{ "Base Note"				, "12_24", 15 , 0, 2, EVarType::Unsigned },
+		{ "Times"					, "13_24", 1 , 3, 6, EVarType::Unsigned},
+		{ "Resonance"				, "15_24", 8 , 0, 6, EVarType::Unsigned },
+		{ "Low Pass Filter"			, "16_24", 2 , 2, 2, EVarType::Unsigned },
+		{ "WetDry"					, "17_24", 9 , 0, 6, EVarType::Unsigned },
+		{ "WetDrySource"			, "18_24", 2 , 3, 7, EVarType::Unsigned },
+		{ "WetDryAmount"			, "19_24", 10 , 0, 7, EVarType::Signed } };
+
+	effect_conversions[10] = { // St. Random Filter
+		{ "LFO Waveform"			, "0_24", 9 , 0, 0, EVarType::Unsigned},
+		{ "LFO Phase"				, "1_24", 11 , 0, 4, EVarType::Unsigned},
+		{ "LFO Frequency"			, "2_24", 1 , 0, 7, EVarType::Unsigned},
+		{ "Source"					, "3_24", 12 , 0, 4, EVarType::Unsigned},
+		{ "Amount"					, "4_24", 2 , 0, 6, EVarType::Signed},
+		{ "LFO Step Freq"			, "5_24", 3 , 0, 6, EVarType::Unsigned},
+		{ "Amount"					, "6_24", 4 , 0, 6, EVarType::Unsigned},
+		{ "BPM Midi Sync"			, "7_24", 12 , 5, 5, EVarType::Unsigned},
+		{ "BPM"						, "8_24", 13 , 0, 6, EVarType::Unsigned},
+		{ "Base Note"				, "9_24", 14 , 0, 2, EVarType::Unsigned},
+		{ "Times"					, "10_24", 15 , 0, 3, EVarType::Unsigned},
+		{ "Step Base Note"			, "11_24", 15 , 4, 6, EVarType::Unsigned},
+		{ "Times"					, "12_24", 14 , 3, 5, EVarType::Unsigned},
+		{ "Manual"					, "14_24", 0 , 0, 4, EVarType::Unsigned},
+		{ "Depth"					, "15_24", 9 , 1, 7, EVarType::Unsigned},
+		{ "Source"					, "16_24", 10 , 0, 2, EVarType::Unsigned, 11, 6, 7},
+		{ "Amount"					, "17_24", 5 , 0, 6, EVarType::Signed},
+		{ "Resonance"				, "18_24", 6 , 0, 6, EVarType::Unsigned},
+		{ "WetDry"					, "19_24", 7 , 0, 6, EVarType::Signed},
+		{ "WetDrySource"			, "20_24", 10 , 3, 7, EVarType::Unsigned},
+		{ "WetDryAmount"			, "21_24", 8 , 0, 6, EVarType::Signed} };
+
+	effect_conversions[11] = { // St. Exciter/Enhncr
+		{ "Exciter Blend"			, "0_24", 0 ,  0, 7, EVarType::Signed},
+		{ "Source"					, "1_24", 11,  0, 4, EVarType::Unsigned},
+		{ "Amount"					, "2_24", 1 ,  0, 5, EVarType::Unsigned},
+		{ "Emphatic Point"			, "3_24", 2 ,  0, 6, EVarType::Unsigned},
+		{ "Source"					, "4_24", 10,  0, 1, EVarType::Unsigned, 11, 5, 7},
+		{ "Amount"					, "5_24", 3 ,  0, 6, EVarType::Signed},
+		{ "Enhancer Delay L"		, "6_24", 4 ,  0, 7, EVarType::Unsigned},
+		{ "Enhancer Delay R"		, "7_24", 5 ,  0, 7, EVarType::Unsigned},
+		{ "Enhancer Depth"			, "8_24", 9 ,  0, 0, EVarType::Unsigned, 10, 2, 7},
+		{ "Source"					, "9_24", 15,  0, 2, EVarType::Unsigned},
+		{ "Amount"					, "10_24", 6 , 0, 5, EVarType::Unsigned},
+		{ "EQ Trim"					, "11_24", 8 , 0, 6, EVarType::Unsigned},
+		{ "PRe LEQ Gain"			, "12_24", 14, 0, 1, EVarType::Signed, 15, 5, 7},
+		{ "Pre HEQ Gain"			, "13_24", 13, 0, 0, EVarType::Unsigned, 14, 4, 7},
+		{ "WetDry"					, "14_24", 12, 0, 1, EVarType::Unsigned, 13, 3, 7},
+		{ "WetDrySource"			, "15_24", 12, 2, 6, EVarType::Unsigned},
+		{ "WetDryAmount"			, "16_24", 7 , 0, 6, EVarType::Unsigned} };
+
+	effect_conversions[12] = { // St. Sub Oscillator
+		{ "OSC Mode"				, "0_24",  0 , 0, 0, EVarType::Unsigned },
+		{ "Note Interval"			, "1_24",  1 , 0, 5, EVarType::Unsigned },
+		{ "Note Fine"				, "3_24",  3,  0, 7, EVarType::Unsigned },
+		{ "Fixed Frequency"			, "4_24",  4 , 0, 6, EVarType::Unsigned },
+		{ "Source"					, "5_24",  5 , 0, 3, EVarType::Unsigned },
+		{ "Amount"					, "6_24",  6 , 0, 4, EVarType::Unsigned },
+		{ "Envelope Pre LPF"		, "7_24",  7 , 0, 5, EVarType::Unsigned },
+		{ "Envelope Sens"			, "8_24",  8 , 0, 6, EVarType::Unsigned },
+		{ "Envelope Shape"			, "9_24",  9 , 0, 7, EVarType::Signed },
+		{ "WetDry"					, "10_24", 10, 0, 6, EVarType::Unsigned},
+		{ "WetDrySource"			, "11_24", 11, 0, 4, EVarType::Unsigned},
+		{ "WetDryAmount"			, "12_24", 12, 0, 7, EVarType::Unsigned } };
+
 	effect_conversions[13] = { // Talking Modulator
 		{ "SweepMode"				, "0_24",  0 , 0, 0, EVarType::Unsigned},
 		{ "ManualVoiceControl"		, "1_24",  0 , 1, 7, EVarType::Unsigned},
@@ -180,6 +257,25 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDrySource"			, "10_24", 3 , 0, 4, EVarType::Unsigned},
 		{ "WetDryAmount"			, "11_24", 7 , 0, 7, EVarType::Signed}
 	};
+
+	effect_conversions[15] = { // St. Analog Record
+		{ "Speed"					, "0_24", 1 , 0, 1, EVarType::Unsigned},
+		{ "Flutter"					, "1_24", 1 , 2, 7, EVarType::Unsigned},
+		{ "Noise Density"			, "2_24", 0 , 1, 7, EVarType::Unsigned},
+		{ "Noise Tone"				, "3_24", 4 , 0, 6, EVarType::Unsigned},
+		{ "Noise Level"				, "4_24", 5 , 0, 3, EVarType::Unsigned},
+		{ "Source"					, "5_24", 3 , 0, 4, EVarType::Unsigned},
+		{ "Amount"					, "6_24", 13 , 0, 7, EVarType::Signed},
+		{ "Click Level"				, "7_24", 6 , 0, 5, EVarType::Unsigned},
+		{ "Source"					, "8_24", 2 , 0, 1, EVarType::Unsigned, 3, 5, 7},
+		{ "Amount"					, "9_24", 14 , 0, 7, EVarType::Signed},
+		{ "EQ Trim"					, "10_24", 7 , 0, 6, EVarType::Unsigned},
+		{ "Pre EQ Cutoff"			, "11_24", 8 , 0, 5, EVarType::Unsigned},
+		{ "Q"						, "12_24", 9 , 0, 6, EVarType::Unsigned},
+		{ "Gain"					, "13_24", 10 , 0, 5, EVarType::Unsigned},
+		{ "WetDry"					, "14_24", 11 , 0, 6, EVarType::Unsigned},
+		{ "WetDrySource"			, "15_24", 2 , 2, 6, EVarType::Unsigned},
+		{ "WetDryAmount"			, "16_24", 15 , 0, 7, EVarType::Signed} };
 
 	effect_conversions[16] = { // Stereo Chorus
 		{ "LFO Waveform"			, "0_24",  12, 0, 0, EVarType::Unsigned },
@@ -262,6 +358,25 @@ void PCG_Converter::initEffectConversions()
 		 { "Source"					, "8_24", 8, 0, 4, EVarType::Unsigned },
 		 { "Amt"					, "9_24", 9, 0, 7, EVarType::Signed } };
 
+	effect_conversions[20] = { // Stereo Flanger
+		{ "Delay Time"				, "0_24",  0 , 0, 3, EVarType::Unsigned},
+		{ "LFO Waveform"			, "1_24",  12, 0, 0, EVarType::Unsigned},
+		{ "LFO Shape"				, "2_24",  1 , 0, 7, EVarType::Signed},
+		{ "LFO Phase"				, "3_24",  12, 1, 5, EVarType::Signed},
+		{ "LFO Freq"				, "4_24",  2 , 0, 5, EVarType::Unsigned},
+		{ "Source"					, "5_24",  3 , 0, 3, EVarType::Unsigned},
+		{ "Amount"					, "6_24",  4 , 0, 6, EVarType::Unsigned},
+		{ "BPMMidiSync"				, "7_24",  13, 0, 0, EVarType::Unsigned},
+		{ "BPM"						, "8_24",  14, 0, 6, EVarType::Unsigned},
+		{ "Base Note"				, "9_24",  15, 0, 2, EVarType::Unsigned},
+		{ "Times"					, "10_24", 15, 3, 4, EVarType::Unsigned},
+		{ "Depth"					, "12_24", 5 , 0, 5, EVarType::Unsigned},
+		{ "Feedback"				, "13_24", 6 , 0, 7, EVarType::Signed},
+		{ "HighDamp"				, "14_24", 7 , 0, 6, EVarType::Unsigned},
+		{ "WetDry"					, "15_24", 9 , 0, 7, EVarType::Signed},
+		{ "WetDrySource"			, "16_24", 10, 0, 4, EVarType::Unsigned},
+		{ "WetDryAmount"			, "17_24", 11, 0, 7, EVarType::Signed} };
+
 	effect_conversions[23] = { // Stereo Phaser
 		{ "LFO Waveform"			, "0_24",  12, 0, 0, EVarType::Unsigned},
 		{ "LFO Shape"				, "1_24",  0 , 0, 7, EVarType::Signed},
@@ -283,6 +398,18 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDry"					, "17_24", 9 , 0, 6, EVarType::Unsigned},
 		{ "WetDrySource"			, "18_24", 10, 0, 4, EVarType::Unsigned},
 		{ "WetDryAmount"			, "19_24", 11, 0, 7, EVarType::Signed} };
+
+	effect_conversions[31] = { // Scratch
+		{ "Scratch Source"			, "0_24", 5, 1, 4, EVarType::Unsigned},
+		{ "Response"				, "1_24", 7, 0, 6, EVarType::Unsigned},
+		{ "Envelope Select"			, "2_24", 2, 0, 0, EVarType::Unsigned},
+		{ "Source"					, "3_24", 1, 1, 5, EVarType::Unsigned},
+		{ "Threshold"				, "4_24", 2, 1, 6, EVarType::Unsigned},
+		{ "Reponse"					, "5_24", 6, 0, 5, EVarType::Unsigned},
+		{ "Direct Mix"				, "6_24", 1, 6, 7, EVarType::Unsigned},
+		{ "WetDry"					, "7_24", 3, 0, 6, EVarType::Unsigned},
+		{ "WetDrySource"			, "8_24", 4, 0, 4, EVarType::Unsigned},
+		{ "WetDryAmount"			, "9_24", 0, 0, 7, EVarType::Unsigned} };
 
 	// [34] Stereo Auto Pan  		// TODO IN PROGRESS
 	effect_conversions[34] = {
@@ -328,6 +455,37 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDryAmount"			, "21_24", 12 , 0, 7, EVarType::Signed},
 	};
 
+	effect_conversions[37] = { // Detune
+		{ "Pitch Shift"				, "0_24",  0 , 0, 6, EVarType::Signed},
+		{ "Source"					, "1_24",  1 , 0, 4, EVarType::Unsigned},
+		{ "Amount"					, "2_24",  2 , 0, 6, EVarType::Signed},
+		{ "Delay Time"				, "3_24",  3 , 0, 6, EVarType::Unsigned},
+		{ "Feedback"				, "4_24",  4 , 0, 6, EVarType::Unsigned},
+		{ "High Damp"				, "5_24",  5 , 0, 6, EVarType::Unsigned},
+		{ "Input Level Dmod"		, "7_24",  7 , 0, 6, EVarType::Signed},
+		{ "Source"					, "6_24",  6 , 0, 4, EVarType::Unsigned},
+		{ "WetDry"					, "8_24",  8 , 0, 6, EVarType::Unsigned},
+		{ "WetDrySource"			, "9_24",  9 , 0, 4, EVarType::Unsigned},
+		{ "WetDryAmount"			, "10_24", 10 , 0, 7, EVarType::Unsigned} };
+
+	effect_conversions[39] = { // Pitch Shift Mod.
+		{ "Pitch Shift"				, "0_24",  0 , 0, 7, EVarType::Signed },
+		{ "LFO Waveform"			, "1_24",  1 , 0, 0, EVarType::Unsigned },
+		{ "LFO Freq"				, "2_24",  2 , 0, 7, EVarType::Unsigned },
+		{ "Source"					, "3_24",  3 , 0, 4, EVarType::Unsigned },
+		{ "Amount"					, "4_24",  4 , 0, 7, EVarType::Signed },
+		{ "BPMMidiSync"				, "5_24",  13, 0, 0, EVarType::Unsigned},
+		{ "BPMVal"					, "6_24",  14, 0, 7, EVarType::Unsigned },
+		{ "Base Note"				, "7_24",  15, 0, 2, EVarType::Unsigned },
+		{ "Times"					, "7_24",  15, 3, 6, EVarType::Unsigned },
+		{ "Depth"					, "10_24", 5 , 0, 7, EVarType::Signed },
+		{ "Source"					, "11_24", 6 , 0, 4, EVarType::Unsigned },
+		{ "Amount"					, "12_24", 7 , 0, 7, EVarType::Signed },
+		{ "Pan"						, "13_24", 8 , 0, 5, EVarType::Unsigned },
+		{ "WetDry"					, "14_24", 9 , 0, 6, EVarType::Unsigned },
+		{ "WetDrySource"			, "15_24", 10, 0, 4, EVarType::Unsigned },
+		{ "WetDryAmount"			, "16_24", 11, 0, 7, EVarType::Signed } };
+
 	effect_conversions[41] = { // Early Reflections
 		{ "Type"					, "0_24",  0, 0, 1, EVarType::Unsigned},
 		{ "ER Time"					, "1_24",  1, 0, 7, EVarType::Unsigned},
@@ -358,6 +516,70 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDry"					, "14_24", 13, 0, 2, EVarType::Unsigned, 14, 4, 7 },
 		{ "WetDrySource"			, "15_24", 13, 3, 7, EVarType::Unsigned},
 		{ "WetDryAmount"			, "16_24", 12, 0, 7, EVarType::Signed} };
+
+	effect_conversions[44] = { // Stereo/Cross Delay
+		{ "Stereo/Cross"			, "15_24", 8 , 7, 7, EVarType::Unsigned},
+		{ "L Delay Time"			, "0_24",  14, 0, 4, EVarType::Unsigned, 15, 0, 7},
+		{ "R Delay Time"			, "1_24",  12, 0, 2, EVarType::Unsigned, 13, 0, 7, Byte(14, 6, 7)},
+		{ "L Feedback"				, "5_24",  0 , 0, 6, EVarType::Unsigned},
+		{ "R Feedback"				, "6_24",  1 , 0, 7, EVarType::Signed},
+		{ "L Feedback Source"		, "7_24",  8 , 2, 6, EVarType::Unsigned},
+		{ "L Feedback Amount"		, "8_24",  2 , 0, 6, EVarType::Unsigned},
+		{ "R Feedback Amount"		, "9_24",  3 , 0, 6, EVarType::Unsigned},
+		{ "High Damp"				, "10_24", 9 , 0, 3, EVarType::Unsigned, 10, 6, 7},
+		{ "Low Damp"				, "11_24", 7 , 0, 6, EVarType::Unsigned},
+		{ "Input Level Dmod"		, "13_24", 5 , 0, 7, EVarType::Signed},
+		{ "Input Level Source"		, "12_24", 6 , 0, 3, EVarType::Unsigned, 7, 7, 7},
+		{ "Spread"					, "14_24", 10, 0, 4, EVarType::Unsigned, 11, 7, 7},
+		{ "WetDry"					, "2_24",  11, 0, 5, EVarType::Unsigned},
+		{ "WetDrySource"			, "3_24",  8 , 0, 1, EVarType::Unsigned, 9, 5, 7},
+		{ "WetDryAmount"			, "4_24",  4 , 0, 6, EVarType::Signed} };
+
+	effect_conversions[46] = { // St.Modulation Delay
+		{ "Modulation Mode"			, "0_24",  7,  6, 6, EVarType::Unsigned },
+		{ "D-mod Modulation"		, "19_24", 11, 7, 7, EVarType::Unsigned },
+		{ "D-mod Source"			, "1_24",  9,  2, 6, EVarType::Unsigned },
+		{ "D-mod Response"			, "2_24",  11, 0, 4, EVarType::Unsigned },
+		{ "LFO Waveform"			, "3_24",  7 , 7, 7, EVarType::Unsigned },
+		{ "LFO Shape"				, "4_24",  4 , 0, 7, EVarType::Signed },
+		{ "LFO Freq"				, "5_24",  5 , 0, 4, EVarType::Unsigned },
+		{ "LDO Sync"				, "6_24",  9 , 7, 7, EVarType::Unsigned },
+		{ "LFO Source"				, "7_24",  9 , 0, 0, EVarType::Unsigned, 10, 5, 7 },
+		{ "L LFO Phase"				, "8_24",  7 , 0, 4, EVarType::Signed },
+		{ "R LFO Phase"				, "9_24",  12, 2, 7, EVarType::Signed },
+		{ "L Depth"					, "10_24", 2 , 0, 6, EVarType::Unsigned },
+		{ "R Depth"					, "11_24", 3 , 0, 6, EVarType::Unsigned },
+		{ "L Delay Time"			, "12_24", 14, 0, 4, EVarType::Unsigned, 15, 0, 7 },
+		{ "R Delay Time"			, "13_24", 12, 0, 1, EVarType::Unsigned, 13, 0, 7, Byte {14, 5, 7} },
+		{ "L Feedback"				, "14_24", 0 , 0, 7, EVarType::Signed },
+		{ "R Feedback"				, "15_24", 1 , 0, 7, EVarType::Signed },
+		{ "WetDry"					, "16_24", 8 , 0, 6, EVarType::Unsigned },
+		{ "WetDrySource"			, "17_24", 10, 0, 4, EVarType::Unsigned },
+		{ "WetDryAmount"			, "18_24", 6 , 0, 7, EVarType::Signed } };
+
+	effect_conversions[49] = { // L/C/R BPM Delay
+		{ "BPM"						, "0_24", 5 , 0, 6, EVarType::Unsigned},
+		{ "L Delay Base Note"		, "2_24", 3 , 0, 2, EVarType::Unsigned},
+		{ "L Times"					, "3_24", 6 , 4, 5, EVarType::Unsigned},
+		{ "L Level"					, "4_24", 7 , 0, 5, EVarType::Unsigned},
+		{ "C Delay Base Note"		, "5_24", 3 , 3, 5, EVarType::Unsigned},
+		{ "C Times"					, "6_24", 2 , 1, 3, EVarType::Unsigned},
+		{ "C Level"					, "7_24", 6 , 0, 2, EVarType::Unsigned, 7, 6, 7},
+		{ "R Delay Base Note"		, "8_24", 2 , 0, 0, EVarType::Unsigned, 3, 6, 7},
+		{ "R Times"					, "9_24", 2 , 5, 7, EVarType::Unsigned},
+		{ "R Level"					, "10_24", 11, 0, 5, EVarType::Unsigned},
+		{ "Ghost param"				, "11_24", 1 , 1, 1, EVarType::Unsigned},
+		{ "Feedback (C Delay)"		, "12_24", 0 , 0, 5, EVarType::Unsigned},
+		{ "Feedback Source"			, "13_24", 10, 0, 2, EVarType::Unsigned, 11, 6, 7},
+		{ "Feedback Amount"			, "14_24", 4 , 0, 5, EVarType::Signed},
+		{ "High Damp"				, "15_24", 9 , 0, 1, EVarType::Unsigned, 10, 3, 7},
+		{ "Low Damp"				, "16_24", 15, 0, 5, EVarType::Unsigned},
+		{ "Input Level Dmod"		, "17_24", 14, 0, 3, EVarType::Unsigned, 15, 7, 7},
+		{ "Input Source"			, "18_24", 8 , 0, 6, EVarType::Unsigned},
+		{ "Spread"					, "19_24", 9 , 2, 7, EVarType::Unsigned},
+		{ "WetDry"					, "20_24", 13, 0, 2, EVarType::Unsigned, 14, 4, 7},
+		{ "WetDrySource"			, "21_24", 13, 3, 7, EVarType::Unsigned},
+		{ "WetDryAmount"			, "22_24", 12, 0, 7, EVarType::Signed} };
 
 	effect_conversions[50] = { // St. BPM Delay
 		{ "BPMVal"					, "0_24", 4 ,  0, 6, EVarType::Unsigned},
@@ -414,7 +636,8 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDrySource"			, "8_24",  10, 0, 4, EVarType::Unsigned},
 		{ "WetDryAmount"			, "9_24",  11, 0, 7, EVarType::Signed} };
 
-	effect_conversions[56] = { // Reverb Room
+	effect_conversions[56] = // Reverb Room
+		effect_conversions[57] = { // Reverb BrightRoom
 		{ "Reverb Time"				, "0_24",  0,  0, 6, EVarType::Unsigned},
 		{ "High Damp"				, "1_24",  1,  0, 7, EVarType::Unsigned},
 		{ "Pre Delay"				, "2_24",  2,  0, 7, EVarType::Unsigned},
@@ -427,6 +650,47 @@ void PCG_Converter::initEffectConversions()
 		{ "WetDry"					, "9_24",  9,  0, 6, EVarType::Unsigned},
 		{ "WetDrySource"			, "10_24", 10, 0, 4, EVarType::Unsigned},
 		{ "WetDryAmount"			, "11_24", 11, 0, 7, EVarType::Signed} };
+
+	effect_conversions[65] = { // Comp - OD/HiGain
+		{ "Sensitivity"				, "0_24",  11, 0, 6, EVarType::Unsigned },
+		{ "Attack"					, "1_24",  13, 0, 6, EVarType::Unsigned },
+		{ "Output Level"			, "2_24",  14, 0, 6, EVarType::Unsigned },
+		{ "TODO Drive Mode"			, "3_24",  13, 7, 7, EVarType::Unsigned },
+		{ "Drive"					, "4_24",  3 , 0, 5, EVarType::Unsigned },
+		{ "Output Level"			, "5_24",  2 , 0, 3, EVarType::Unsigned, 3, 7, 7 },
+		{ "Output Level Source"		, "18_24", 9,  0, 4, EVarType::Unsigned },
+		{ "Output Level Amount"		, "19_24", 8,  0, 3, EVarType::Signed, 9, 5, 7 },
+		{ "Low CutOff"				, "6_24",  1 , 0, 2, EVarType::Unsigned, 2 , 5, 7 },
+		{ "Low CutOff Gain"			, "7_24",  1 , 3, 7, EVarType::Signed },
+		{ "Mid1 Cutoff"				, "8_24",  5 , 0, 5, EVarType::Unsigned },
+		{ "Mid1 Cutoff Q"			, "9_24",  4 , 0, 1, EVarType::Unsigned, 5 , 6, 7 },
+		{ "Mid1 Cutoff Gain"		, "10_24", 4 , 2, 7, EVarType::Signed },
+		{ "Mid2 Cutoff"				, "11_24", 7 , 0, 5, EVarType::Unsigned },
+		{ "Mid2 Cutoff Q"			, "12_24", 6 , 0, 1, EVarType::Unsigned, 7, 6, 7 },
+		{ "Mid2 Cutoff Gain"		, "13_24", 6 , 2, 6, EVarType::Signed },
+		{ "Routing"					, "14_24", 14, 7, 7, EVarType::Unsigned },
+		{ "WetDry"					, "15_24", 0 , 1, 7, EVarType::Unsigned },
+		{ "WetDrySource"			, "16_24", 12, 0, 4, EVarType::Unsigned },
+		{ "WetDryAmount"			, "17_24", 15, 0, 7, EVarType::Signed } };
+
+	effect_conversions[67] = { // Comp - Cho/Flng
+		{ "Sensitivity"				, "0_24",  3 , 0, 6, EVarType::Unsigned},
+		{ "Attack"					, "1_24",  2 , 0, 5, EVarType::Unsigned, 3, 7, 7},
+		{ "Output Level"			, "2_24",  1 , 0, 3, EVarType::Unsigned, 2, 6, 7},
+		{ "EQ Trim"					, "14_24", 8 , 0, 6, EVarType::Unsigned},
+		{ "Pre LEQ Gain"			, "15_24", 9 , 0, 5, EVarType::Unsigned},
+		{ "Pre HEQ Gain"			, "16_24", 10, 0, 5, EVarType::Unsigned},
+		{ "Delay Time"				, "3_24",  4,  0, 6, EVarType::Unsigned},
+		{ "LFO Freq"				, "5_24",  14, 0, 7, EVarType::Unsigned},
+		{ "LFO Waveform"			, "4_24",  4,  7, 7, EVarType::Unsigned },
+		{ "Depth"					, "6_24",  0 , 0, 1, EVarType::Unsigned, 1, 5, 7},
+		{ "Feedback"				, "7_24",  5 , 0, 6, EVarType::Signed},
+		{ "Cho/Flng W/D"			, "8_24",  6 , 0, 6, EVarType::Signed},
+		{ "Output Mode"				, "9_24",  5 , 7, 7, EVarType::Unsigned},
+		{ "Routing"					, "10_24", 6,  7, 7, EVarType::Unsigned },
+		{ "WetDry"					, "11_24", 7 , 0, 6, EVarType::Unsigned},
+		{ "WetDrySource"			, "12_24", 0 , 3, 7, EVarType::Unsigned},
+		{ "WetDryAmount"			, "13_24", 15, 0, 7, EVarType::Unsigned} };
 
 	effect_conversions[90] = { // PianoBody/Damper Simulation
 		{ "Sound Board Depth"		, "0_24", 0, 0, 7, EVarType::Unsigned },

@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <array>
 #include <format>
+#include <regex>
 
 #include "include/rapidjson/document.h"
 #include "include/rapidjson/istreamwrapper.h"
@@ -217,7 +218,18 @@ T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
 		T lsbVal = static_cast<T>(getBits(info.varType, data, info.pcgLSBOffset, info.pcgLSBBitStart, info.pcgLSBBitEnd));
 		result |= (T)lsbVal;
 
-		numBits += (info.pcgLSBBitEnd - info.pcgLSBBitStart + 1);
+		numBits += bitShift;
+	}
+
+	if (info.third.has_value())
+	{
+		short bitShift = (info.third->bit_end - info.third->bit_start + 1);
+		result <<= bitShift;
+
+		T lsbVal = static_cast<T>(getBits(info.varType, data, info.third->offset, info.third->bit_start, info.third->bit_end));
+		result |= (T)lsbVal;
+
+		numBits += bitShift;
 	}
 
 	// Convert values with odd num bits
@@ -248,10 +260,34 @@ int PCG_Converter::getPCGValue(unsigned char* data, TritonStruct& info)
 		return getPCGValue_Impl<unsigned int>(data, info);
 }
 
+std::string getPresetNameSafe(const std::string& presetName)
+{
+	auto safePresetName = std::string(presetName);
+	std::string backslash = "\"";
+	std::string escapedBackslash = "\\\"";
+
+	std::vector<size_t> positions;
+
+	size_t pos = safePresetName.find(backslash, 0);
+	while (pos != std::string::npos)
+	{
+		positions.push_back(pos);
+		pos = safePresetName.find(backslash, pos + 1);
+	}
+
+	for (int i = positions.size() - 1; i >= 0; i--)
+	{
+		safePresetName.replace(positions[i], backslash.size(), escapedBackslash);
+	}
+
+	return safePresetName;
+}
+
 void PCG_Converter::jsonWriteHeaderBegin(std::ofstream& json, const std::string& presetName)
 {
+	auto safePresetName = getPresetNameSafe(presetName);
 	json << "{\"version\": 1280, \"general_program_information\": {";
-	json << "\"name\": \"" << presetName << "\", \"category\": \"Keyboard        \", \"categoryIndex\": 0, ";
+	json << "\"name\": \"" << safePresetName << "\", \"category\": \"Keyboard        \", \"categoryIndex\": 0, ";
 	json << "\"author\": \"\", ";
 }
 
@@ -343,6 +379,8 @@ void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffse
 			info.pcgOffset += dataOffset;
 			if (info.pcgLSBOffset != -1)
 				info.pcgLSBOffset += dataOffset;
+			if (info.third.has_value())
+				info.third->offset += dataOffset;
 
 			auto jsonName = utils::string_format("%s_specific_parameter_%s", prefix.c_str(), spec_conv.jsonParam.c_str());
 			auto pcgVal = getPCGValue(data, info);
