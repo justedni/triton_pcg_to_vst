@@ -10,6 +10,7 @@ std::vector<TritonStruct> PCG_Converter::triton_extreme_conversions = {
 	{ "Tube Gain"							, "valveforce_gain", 82, 0, 7 },
 	{ "Output Level"						, "valveforce_output_level", 83, 0, 7 },
 	{ "Pan"									, "valveforce_pan", 106, 0, 7 },
+	{ "Bus"									, "valveforce_bus_select", 107, 0, 2 },
 	{ "Send1"								, "valveforce_send1_level", 130, 0, 7 },
 	{ "Send2"								, "valveforce_send2_level", 131, 0, 7 },
 };
@@ -104,20 +105,11 @@ std::vector<TritonStruct> PCG_Converter::program_conversions = {
 
 int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data)
 {
-	if (paramName.find("osc_2") != std::string::npos)
-	{
-		TritonStruct temp = { "Oscillator Mode" , "common_oscillator_mode", 204, 0, 1 };
-		auto oscMode = PCG_Converter::getPCGValue(data, temp);
-		if (oscMode == 0)
-		{
-			// Ignore garbage values from the PCG for Osc2: Osc mode is Single
-			return pcgBank;
-		}
-	}
 
 	switch (pcgBank)
 	{
 	case 0: return 0; // Default
+	case 1: break; // RAM Bank: unhandled
 	case 2: return 0; // Default ??
 	case 3: return 0; // Default ??
 	case 5: return 0; // Default ??
@@ -129,6 +121,7 @@ int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* dat
 	case 11: return 5; // Best
 	case 12: return 4; // New2
 	case 13: return 3; // New1
+	case 127: return 0; // Drumkit
 	}
 
 	if (pcgBank == 1)
@@ -146,12 +139,12 @@ int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* dat
 
 std::vector<TritonStruct> PCG_Converter::program_osc_conversions = {
 	{ "OSC 1 Multisample High Bank"					, "hi_bank", 232, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
-	{ "OSC 1 Multisample High Multisample/Drumkit"	, "hi_sample_no.", 230, 0, 6, EVarType::Unsigned, 231, 0, 7 },
+	{ "OSC 1 Multisample High Multisample/Drumkit"	, "hi_sample_no.", 230, 0, 5, EVarType::Unsigned, 231, 0, 7 },
 	{ "OSC 1 Multisample High Start Offset"			, "hi_start_offset", 230, 7, 7 },
 	{ "OSC 1 Multisample High Reverse"				, "hi_reverse", 230, 6, 6 },
 	{ "OSC 1 Multisample High Level"				, "hi_level", 233, 0, 7 },
 	{ "OSC 1 Multisample Low Bank"					, "low_bank", 236, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
-	{ "OSC 1 Multisample Low Multisample/Drumkit"	, "low_sample_no.", 234, 0, 6, EVarType::Unsigned, 235, 0, 7 },
+	{ "OSC 1 Multisample Low Multisample/Drumkit"	, "low_sample_no.", 234, 0, 5, EVarType::Unsigned, 235, 0, 7 },
 	{ "OSC 1 Multisample Low Start Offset"			, "low_start_offset", 234, 7, 7, EVarType::Unsigned },
 	{ "OSC 1 Multisample Low Reverse"				, "low_reverse", 234, 6, 6 },
 	{ "OSC 1 Multisample Low Level"					, "low_level", 237, 0, 7 },
