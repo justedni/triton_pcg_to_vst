@@ -40,7 +40,9 @@ On a real Triton, a Combi references up to 8 Programs (called Timbers), and for 
 This is not a requirement for the Combis on the VST: when you save a Combi, the parameters for the entirety of the 8 Timbers are stored inside the Combi .patch file.
 Which means that as long as your PCG is valid (and that the Programs required for your Combis are there in the first place), it's absolutely safe to use my tool to export Combis on their own, without having to save the Programs separately.
 Example: let's say you have a Combi A000 that uses Program B005, Program D105 and Program N015. You just need to call:
+```
 PCGToVST -PCG "TRITON1.PCG" -OutFolder "C:\Triton_Presets" -Combi A
+```
 And all the necessary parameters from Programs B005, Program D105 and Program N015 will be stored in the new file "C:\Triton_Presets\Combi\USER-A\000.patch"
 
 
