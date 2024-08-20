@@ -76,6 +76,14 @@ public:
 	void patchProgramToJson(int bankId, int presetId, const std::string& presetName, unsigned char* data,
 		const std::string& userFolder, const std::string& targetLetter);
 
+	void patchCombiToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
+		const std::string& targetLetter, std::ostream& out_stream);
+	void patchProgramToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
+		const std::string& targetLetter, std::ostream& out_stream);
+
+	void patchToStream(EPatchMode mode, int bankId, int presetId, const std::string& presetName, unsigned char* data,
+		const std::string& targetLetter, std::ostream& out_stream);
+
 	static int getPCGValue(unsigned char* data, TritonStruct& info);
 
 private:
@@ -101,12 +109,12 @@ private:
 		std::string programName;
 	};
 
-	static void jsonWriteHeaderBegin(std::ofstream& json, const std::string& presetName);
-	static void jsonWriteHeaderEnd(std::ofstream& json, int presetId, int bankNumber,
+	static void jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName);
+	static void jsonWriteHeaderEnd(std::ostream& json, int presetId, int bankNumber,
 		const std::string& targetLetter, const std::string& mode);
-	static void jsonWriteEnd(std::ofstream& json, const std::string& presetType);
-	static void jsonWriteDSPSettings(std::ofstream& json, const ParamList& content);
-	static void jsonWriteTimbers(std::ofstream& json, const std::vector<Timber>& timbers);
+	static void jsonWriteEnd(std::ostream& json, const std::string& presetType);
+	static void jsonWriteDSPSettings(std::ostream& json, const ParamList& content);
+	static void jsonWriteTimbers(std::ostream& json, const std::vector<Timber>& timbers);
 
 	const EnumKorgModel m_model;
 	KorgPCG* m_pcg = nullptr;

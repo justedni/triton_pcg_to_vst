@@ -196,18 +196,57 @@ struct fourBits { char d : 4; };
 struct fiveBits { char d : 5; };
 struct sixBits { char d : 6; };
 struct sevenBits { char d : 7; };
+struct eightBits { char d : 8; };
+struct nineBits { short d : 9; };
+struct tenBits { short d : 10; };
+struct elevenBits { short d : 11; };
+struct twelveBits { short d : 12; };
+struct thirteenBits { short d : 13; };
+struct sixteenBits { short d : 16; };
 
 template<typename S, typename T>
-T convertOddValue(T result)
+T convertOddValue(T val)
 {
-	S temp = static_cast<S>(result);
+	S temp = static_cast<S>(val);
 	return static_cast<T>(temp.d);
 }
 
-template<typename T>
-T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
+int convertValue(int val, int numBits)
 {
-	T result = getBits(info.varType, data, info.pcgOffset, info.pcgBitStart, info.pcgBitEnd);
+	if (numBits == 2)
+		return convertOddValue<twoBits>(val);
+	else if (numBits == 3)
+		return convertOddValue<threeBits>(val);
+	else if (numBits == 4)
+		return convertOddValue<fourBits>(val);
+	else if (numBits == 5)
+		return convertOddValue<fiveBits>(val);
+	else if (numBits == 6)
+		return convertOddValue<sixBits>(val);
+	else if (numBits == 7)
+		return convertOddValue<sevenBits>(val);
+	else if (numBits == 8)
+		return convertOddValue<eightBits>(val);
+	else if (numBits == 9)
+		return convertOddValue<nineBits>(val);
+	else if (numBits == 10)
+		return convertOddValue<tenBits>(val);
+	else if (numBits == 11)
+		return convertOddValue<elevenBits>(val);
+	else if (numBits == 12)
+		return convertOddValue<twelveBits>(val);
+	else if (numBits == 13)
+		return convertOddValue<thirteenBits>(val);
+	else if (numBits == 16)
+		return convertOddValue<sixteenBits>(val);
+
+	return val;
+}
+
+int PCG_Converter::getPCGValue(unsigned char* data, TritonStruct& info)
+{
+	auto varType = (info.pcgLSBOffset >= 0 || info.third.has_value()) ? EVarType::Unsigned : info.varType;
+	int result = getBits(varType, data, info.pcgOffset, info.pcgBitStart, info.pcgBitEnd);
 
 	auto numBits = info.pcgBitEnd - info.pcgBitStart + 1;
 	if (info.pcgLSBOffset >= 0)
@@ -215,8 +254,8 @@ T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
 		short bitShift = (info.pcgLSBBitEnd - info.pcgLSBBitStart + 1);
 		result <<= bitShift;
 
-		T lsbVal = static_cast<T>(getBits(info.varType, data, info.pcgLSBOffset, info.pcgLSBBitStart, info.pcgLSBBitEnd));
-		result |= (T)lsbVal;
+		int lsbVal = static_cast<int>(getBits(varType, data, info.pcgLSBOffset, info.pcgLSBBitStart, info.pcgLSBBitEnd));
+		result |= lsbVal;
 
 		numBits += bitShift;
 	}
@@ -226,8 +265,8 @@ T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
 		short bitShift = (info.third->bit_end - info.third->bit_start + 1);
 		result <<= bitShift;
 
-		T lsbVal = static_cast<T>(getBits(info.varType, data, info.third->offset, info.third->bit_start, info.third->bit_end));
-		result |= (T)lsbVal;
+		int lsbVal = static_cast<int>(getBits(info.varType, data, info.third->offset, info.third->bit_start, info.third->bit_end));
+		result |= lsbVal;
 
 		numBits += bitShift;
 	}
@@ -235,29 +274,10 @@ T getPCGValue_Impl(unsigned char* data, TritonStruct& info)
 	// Convert values with odd num bits
 	if (info.varType == EVarType::Signed)
 	{
-		if (numBits == 2)
-			result = convertOddValue<twoBits>(result);
-		else if (numBits == 3)
-			result = convertOddValue<threeBits>(result);
-		else if (numBits == 4)
-			result = convertOddValue<fourBits>(result);
-		else if (numBits == 5)
-			result = convertOddValue<fiveBits>(result);
-		else if (numBits == 6)
-			result = convertOddValue<sixBits>(result);
-		else if (numBits == 7)
-			result = convertOddValue<sevenBits>(result);
+		result = convertValue(result, numBits);
 	}
 
 	return result;
-}
-
-int PCG_Converter::getPCGValue(unsigned char* data, TritonStruct& info)
-{
-	if (info.varType == EVarType::Signed)
-		return getPCGValue_Impl<int>(data, info);
-	else
-		return getPCGValue_Impl<unsigned int>(data, info);
 }
 
 std::string getPresetNameSafe(const std::string& presetName)
@@ -283,7 +303,7 @@ std::string getPresetNameSafe(const std::string& presetName)
 	return safePresetName;
 }
 
-void PCG_Converter::jsonWriteHeaderBegin(std::ofstream& json, const std::string& presetName)
+void PCG_Converter::jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName)
 {
 	auto safePresetName = getPresetNameSafe(presetName);
 	json << "{\"version\": 1280, \"general_program_information\": {";
@@ -291,7 +311,7 @@ void PCG_Converter::jsonWriteHeaderBegin(std::ofstream& json, const std::string&
 	json << "\"author\": \"\", ";
 }
 
-void PCG_Converter::jsonWriteHeaderEnd(std::ofstream& json, int presetId, int bankNumber,
+void PCG_Converter::jsonWriteHeaderEnd(std::ostream& json, int presetId, int bankNumber,
 	const std::string& targetLetter, const std::string& mode)
 {
 	json << "\"mode\": \"" << mode << "\", \"bank\": \"USER-" << targetLetter << "\", ";
@@ -300,7 +320,7 @@ void PCG_Converter::jsonWriteHeaderEnd(std::ofstream& json, int presetId, int ba
 	json << "\"bright_dark\": 1, \"fast_slow\": 1, \"mono_poly\": 2, \"percussive_gate\": 2, \"pitch_mod_filter_mod\": 0, \"type\": 4}}, ";
 }
 
-void PCG_Converter::jsonWriteTimbers(std::ofstream& json, const std::vector<Timber>& timbers)
+void PCG_Converter::jsonWriteTimbers(std::ostream& json, const std::vector<Timber>& timbers)
 {
 	json << "\"timbres\": [";
 
@@ -317,7 +337,7 @@ void PCG_Converter::jsonWriteTimbers(std::ofstream& json, const std::vector<Timb
 	json << " ],";
 }
 
-void PCG_Converter::jsonWriteEnd(std::ofstream& json, const std::string& presetType)
+void PCG_Converter::jsonWriteEnd(std::ostream& json, const std::string& presetType)
 {
 	json << "], \"data_type\": \"" << presetType << "\"}";
 	json << std::endl;
@@ -331,7 +351,7 @@ std::string getOutputPatchPath(int presetId, const std::string& userFolder)
 	return ss.str();
 }
 
-void PCG_Converter::jsonWriteDSPSettings(std::ofstream& json, const PCG_Converter::ParamList& content)
+void PCG_Converter::jsonWriteDSPSettings(std::ostream& json, const PCG_Converter::ParamList& content)
 {
 	json << "\"dsp_settings\": [";
 
@@ -345,21 +365,27 @@ void PCG_Converter::jsonWriteDSPSettings(std::ofstream& json, const PCG_Converte
 	}
 }
 
+void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
+	const std::string& targetLetter, std::ostream& out_stream)
+{
+	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Program, targetLetter, m_model);
+	jsonWriteHeaderBegin(out_stream, presetName);
+	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
+
+	auto& content = m_dictProgParams;
+	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
+	patchProgramUnusedValues(content, "prog_");
+	jsonWriteDSPSettings(out_stream, content);
+
+	jsonWriteEnd(out_stream, "program");
+}
+
 void PCG_Converter::patchProgramToJson(int bankId, int presetId, const std::string& presetName, unsigned char* data,
 	const std::string& userFolder, const std::string& targetLetter)
 {
 	auto outFilePath = getOutputPatchPath(presetId, userFolder);
 	std::ofstream json(outFilePath);
-	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Program, targetLetter, m_model);
-	jsonWriteHeaderBegin(json, presetName);
-	jsonWriteHeaderEnd(json, presetId, bankNumber, targetLetter, "Program");
-
-	auto& content = m_dictProgParams;
-	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
-	patchProgramUnusedValues(content, "prog_");
-	jsonWriteDSPSettings(json, content);
-
-	jsonWriteEnd(json, "program");
+	patchProgramToStream(bankId, presetId, presetName, data, targetLetter, json);
 }
 
 void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix)
@@ -467,11 +493,8 @@ void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, 
 	std::vector<ProgramPatch> allPatches =
 	{
 		{ { "common_oscillator_mode", 2 }, {{ "osc_1_output_use_drum_kit_setting", 1 }} },
-
-		{ { "osc_1_lfo_1_miditempo_sync", 0 }, {{ "osc_1_lfo_1_times", 0 }} },
-		{ { "osc_1_lfo_2_miditempo_sync", 0 }, {{ "osc_1_lfo_2_times", 0 }} },
-		{ { "osc_2_lfo_1_miditempo_sync", 0 }, {{ "osc_2_lfo_1_times", 0 }} },
-		{ { "osc_2_lfo_2_miditempo_sync", 0 }, {{ "osc_2_lfo_2_times", 0 }} },
+		{ { "osc_1_low_sample_no.", 4095 }, {{ "osc_1_low_sample_no.", 999 }} }, // N/A patch
+		{ { "osc_2_low_sample_no.", 4095 }, {{ "osc_2_low_sample_no.", 999 }} }, // N/A patch
 	};
 
 	for (auto& param : content)
@@ -505,16 +528,27 @@ void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, 
 				auto found = std::find_if(content.begin(), content.end(), [&targetName](auto& e) { return e.key == targetName; });
 				assert(found != content.end());
 
-				if (param.value == 6) // Portamento time
-					found->value = 0;
-				else if (param.value == 10) // Expression
+				switch (param.value)
+				{
+				case 10: // Expression
 					found->value = 127;
-				else if (param.value == 11 || param.value == 12) // FX Control 1/2
-					found->value = 0;
-				else if (param.value == 27 || param.value == 28) // MFX Send
-					found->value = 0;
-				else if (param.value > 4)
+					break;
+				case 8: // Post IFX Pan
+				case 9: // Pan
+				case 13: // LPF Cutoff
+				case 14: // Resonance/HPF
+				case 15: // Filter EG Int.
+				case 16: // Filter/Amp Attack
+				case 17: // Filter/Amp Decay
+				case 18: // Filter/Amp Sustain
+				case 19: // Filter/Amp Release
+				case 20: // LFO1 Speed
+				case 21: // LFO1 Pitch Depth
 					found->value = 64;
+					break;
+				default:
+					found->value = 0;
+				}
 			}
 		}
 	}
@@ -628,6 +662,27 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 	const std::string& presetName, unsigned char* data, const std::string& userFolder, const std::string& targetLetter)
 {
+	auto outFilePath = getOutputPatchPath(presetId, userFolder);
+	std::ofstream json(outFilePath);
+	patchCombiToStream(bankId, presetId, presetName, data, targetLetter, json);
+}
+
+void PCG_Converter::patchToStream(EPatchMode mode, int bankId, int presetId, const std::string& presetName, unsigned char* data,
+	const std::string& targetLetter, std::ostream& out_stream)
+{
+	if (mode == EPatchMode::Program)
+	{
+		patchProgramToStream(0, presetId, presetName, (unsigned char*)data, "A", out_stream);
+	}
+	else
+	{
+		patchCombiToStream(0, presetId, presetName, (unsigned char*)data, "A", out_stream);
+	}
+}
+
+void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
+		const std::string& targetLetter, std::ostream& out_stream)
+{
 	auto msg = utils::string_format("%s::%d Patching %s\n", Helpers::bankIdToLetter(bankId).c_str(), presetId, presetName.c_str());
 	std::cout << msg;
 
@@ -723,14 +778,12 @@ void PCG_Converter::patchCombiToJson(int bankId, int presetId,
 		iTimber++;
 	}
 
-	auto outFilePath = getOutputPatchPath(presetId, userFolder);
-	std::ofstream json(outFilePath);
 	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_model);
 
-	jsonWriteHeaderBegin(json, presetName);
-	jsonWriteTimbers(json, timbersToWrite);
-	jsonWriteHeaderEnd(json, presetId, bankNumber, targetLetter, "Combi");
-	jsonWriteDSPSettings(json, content);
+	jsonWriteHeaderBegin(out_stream, presetName);
+	jsonWriteTimbers(out_stream, timbersToWrite);
+	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Combi");
+	jsonWriteDSPSettings(out_stream, content);
 
-	jsonWriteEnd(json, "combi");
+	jsonWriteEnd(out_stream, "combi");
 }

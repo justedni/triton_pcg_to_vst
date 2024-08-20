@@ -7,71 +7,18 @@
 #include <sstream>
 #include <map>
 #include <iostream>
+#include <filesystem>
 #include <assert.h>
 #include <chrono>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 #include "include/rapidjson/document.h"
 #include "include/rapidjson/istreamwrapper.h"
 
-UnitTest::UnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode type, const std::string& unitTestFolder,
-	const std::string& pcgBankLetter, int pcgProgId, const std::string& patchRefName)
-	: m_converterTemplate(converterTemplate)
-	, m_pcg(pcg)
-	, m_type(type)
-	, m_unitTestFolder(unitTestFolder)
-	, m_pcgBankLetter(pcgBankLetter)
-	, m_pcgProgId(pcgProgId)
-	, m_patchRefName(patchRefName)
-{
-}
-
-UnitTest::~UnitTest()
-{
-	if (m_thread)
-	{
-		delete m_thread;
-		m_thread = nullptr;
-	}
-}
-
-void UnitTest::startThread()
-{
-	if (m_bUseThread)
-	{
-		m_thread = new std::thread(
-			&UnitTest::perform, this);
-	}
-}
-
-void UnitTest::log(std::string&& txt)
-{
-	if (m_bUseThread)
-		m_outputLog.push_back(std::move(txt));
-	else
-		std::cout << txt;
-}
-
-void UnitTest::wait()
-{
-	if (m_bUseThread)
-	{
-		m_thread->join();
-	}
-	else
-	{
-		perform();
-	}
-
-	for (auto& log : m_outputLog)
-	{
-		std::cout << log;
-	}
-
-	if (!m_retValue) std::cerr << "...Failed!\n";
-	else std::cout << " ...Success!\n";
-}
-
-bool UnitTest::perform()
+bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode type, const std::string& unitTestFolder,
+	const std::string& pcgBankLetter, int pcgProgId, const std::string& patchRefName, std::string& outLog)
 {
 	auto isIgnoredIFXParamForUnitTest = [](const std::string& paramName, int ifxId, bool ifxState)
 	{
@@ -91,54 +38,37 @@ bool UnitTest::perform()
 		return false;
 	};
 
-	{
-		std::stringstream ss;
-		ss << "Unit Test: " << m_pcgBankLetter << ":" << m_pcgProgId << " and " << m_patchRefName;
-		log(ss.str());
-	}
-
 	bool bErrors = false;
 
-	KorgBanks* container = (m_type == EPatchMode::Program) ? m_pcg->Program : m_pcg->Combination;
-	std::string subfolder = (m_type == EPatchMode::Program) ? "Program" : "Combi";
-	std::string jsonPrefix = (m_type == EPatchMode::Program) ? "prog_" : "combi_";
+	KorgBanks* container = (type == EPatchMode::Program) ? pcg->Program : pcg->Combination;
+	std::string subfolder = (type == EPatchMode::Program) ? "Program" : "Combi";
+	std::string jsonPrefix = (type == EPatchMode::Program) ? "prog_" : "combi_";
 
-	std::string generatedFolder;
-	{
-		std::string tempFolder = m_unitTestFolder + "Temp\\";
-		Helpers::createFolder(tempFolder);
-		std::string tempSubFolder = tempFolder + subfolder + "\\";
-		Helpers::createFolder(tempSubFolder);
-		generatedFolder = tempSubFolder + m_pcgBankLetter + "\\";
-		Helpers::createFolder(generatedFolder);
-	}
+	auto converter = PCG_Converter(*converterTemplate, unitTestFolder);
 
-	auto converter = PCG_Converter(*m_converterTemplate, generatedFolder);
+	KorgBank* foundBank = nullptr;
 
 	for (int i = 0; i < container->count; i++)
 	{
 		auto* bank = container->bank[i];
 		auto bankLetter = Helpers::bankIdToLetter(bank->bank);
 
-		if (bankLetter != m_pcgBankLetter)
-			continue;
-
-		assert(m_pcgProgId >= 0 && m_pcgProgId < 128);
-
-		auto* item = bank->item[m_pcgProgId];
-		auto name = std::string((char*)item->data, 16);
-
-		if (m_type == EPatchMode::Program)
+		if (bankLetter == pcgBankLetter)
 		{
-			converter.patchProgramToJson(0, m_pcgProgId, name, (unsigned char*)item->data, generatedFolder, "A");
-		}
-		else
-		{
-			converter.patchCombiToJson(0, m_pcgProgId, name, (unsigned char*)item->data, generatedFolder, "A");
+			foundBank = bank;
+			break;
 		}
 	}
 
-	auto refPath = m_unitTestFolder + subfolder + "\\" + m_patchRefName;
+	assert(pcgProgId >= 0 && pcgProgId < 128);
+	assert(foundBank);
+	auto* item = foundBank->item[pcgProgId];
+	std::string pcgPresetName = std::string((char*)item->data, 16);
+
+	std::stringstream generatedStream;
+	converter.patchToStream(type, 0, pcgProgId, pcgPresetName, (unsigned char*)item->data, "A", generatedStream);
+
+	auto refPath = unitTestFolder + subfolder + "\\" + patchRefName;
 
 	std::ifstream refIfs(refPath);
 	if (!refIfs.is_open())
@@ -151,20 +81,8 @@ bool UnitTest::perform()
 	rapidjson::Document refJson;
 	refJson.ParseStream(refisw);
 
-	std::ostringstream ss;
-	ss << generatedFolder << std::setw(3) << std::setfill('0') << m_pcgProgId << ".patch";
-	std::string generatedPath = ss.str();
-
-	std::ifstream genIfs(generatedPath);
-	if (!genIfs.is_open())
-	{
-		std::cerr << "Generated json file " << generatedPath << " not found!!\n";
-		assert(genIfs.is_open());
-	}
-
-	rapidjson::IStreamWrapper isw{ genIfs };
 	rapidjson::Document generatedJson;
-	generatedJson.ParseStream(isw);
+	generatedJson.Parse(generatedStream.str().c_str());
 
 	auto refPresetName = std::string(refJson["general_program_information"]["name"].GetString());
 	auto generatedPresetName = std::string(generatedJson["general_program_information"]["name"].GetString());
@@ -218,8 +136,8 @@ bool UnitTest::perform()
 				if (!Helpers::isIgnoredParam(refParamName))
 				{
 					std::stringstream ss;
-					ss << "\terror: Missing Param " << refParamName << "(" << refParamVal << ")" << "\n";
-					log(ss.str());
+					ss << "\n\terror: Missing Param " << refParamName << "(" << refParamVal << ")" << "\n";
+					outLog.append(ss.str());
 				}
 
 				refParamId++;
@@ -236,13 +154,13 @@ bool UnitTest::perform()
 			{
 				if (bPrintErrorHeader)
 				{
-					log("\t ---- Left: Ref Json ---- Right: Converted from PCG\n");
+					outLog.append("\t ---- Left: Ref Json ---- Right: Converted from PCG\n");
 					bPrintErrorHeader = false;
 				}
 
 				std::stringstream ss;
 				ss << "\terror: Param " << refParamName << ": " << refParamVal << " != " << generatedParamVal << "\n";
-				log(ss.str());
+				outLog.append(ss.str());
 
 				bErrors = true;
 			}
@@ -252,7 +170,6 @@ bool UnitTest::perform()
 		generatedParamId++;
 	}
 
-	m_retValue = !bErrors;
 	return !bErrors;
 }
 
@@ -268,8 +185,6 @@ void doUnitTests()
 
 	auto processTests = [](const std::string& subfolder, auto type, const auto& prog_tests)
 	{
-		std::vector<UnitTest*> m_jobs;
-
 		const std::string unitTestFolder = "..\\..\\UnitTest\\" + subfolder + "\\";
 		const std::string refPCGPath = unitTestFolder + "Ref.PCG";
 
@@ -285,20 +200,18 @@ void doUnitTests()
 		for (auto& test : prog_tests)
 		{
 			std::stringstream patchNameStrm;
-			patchNameStrm << test.pcg_bank << std::setw(3) << std::setfill('0') << test.pcg_program << ".patch";
+			patchNameStrm << test.pcg_bank << std::setw(3) << std::setfill('0') << test.pcg_program;
 
-			auto* newTest = new UnitTest(&converterTemplate, pcg, type, unitTestFolder, test.pcg_bank, test.pcg_program, patchNameStrm.str());
-			m_jobs.push_back(newTest);
+			auto patchName = patchNameStrm.str();;
+			patchNameStrm << ".patch";
 
-			newTest->startThread();
-		}
+			std::string outLog;
+			auto retValue = doUnitTest(&converterTemplate, pcg, type, unitTestFolder, test.pcg_bank, test.pcg_program, patchNameStrm.str(), outLog);
 
-		for (auto it = m_jobs.begin(); it != m_jobs.end();)
-		{
-			auto* job = (*it);
-			job->wait();
-			delete job;
-			it = m_jobs.erase(it);
+			std::cout << patchName << (retValue ? ": OK " : ": ERRORS:\n");
+
+			if (!outLog.empty())
+				std::cout << outLog;
 		}
 	};
 
