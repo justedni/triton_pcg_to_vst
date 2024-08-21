@@ -317,11 +317,49 @@ std::string getPresetNameSafe(const std::string& presetName)
 	return safePresetName;
 }
 
-void PCG_Converter::jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName)
+std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, const PCG_Converter::ParamList& content)
+{
+	const bool isCombi = (mode == EPatchMode::Combi);
+	auto index = isCombi ? 5702 : 6474; // combi_category / prog_common_category
+	auto found = content.find(index);
+	assert(found != content.end());
+	auto categoryId = found->second.value;
+
+	std::string name;
+
+	switch (categoryId)
+	{
+	case 0:  name = "Keyboard"; break;
+	case 1:  name = "Organ"; break;
+	case 2:  name = "Bell/Mallet"; break;
+	case 3:  name = "Strings"; break;
+	case 4:  name = "Vocal/Airy"; break;
+	case 5:  name = "Brass"; break;
+	case 6:  name = "Woodwind/Reed"; break;
+	case 7:  name = "Guitar/Plucked"; break;
+	case 8:  name = "Bass"; break;
+	case 9:  name = "Slow Synth"; break;
+	case 10: name = "Fast Synth"; break;
+	case 11: name = "Lead Synth"; break;
+	case 12: name = "Motion Synth"; break;
+	case 13: name = "SE"; break;
+	case 14: name = "Hit/Arpg"; break;
+	case 15: name = "Drums"; break;
+	default:
+		assert(false);
+	}
+
+	auto whitespace = std::string(16 - name.length(), ' ');
+	name += whitespace;
+	return { categoryId, name };
+}
+
+void PCG_Converter::jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName, EPatchMode mode, const PCG_Converter::ParamList& content)
 {
 	auto safePresetName = getPresetNameSafe(presetName);
+	auto [categoryId, categoryName] = getCategory(mode, content);
 	json << "{\"version\": 1280, \"general_program_information\": {";
-	json << "\"name\": \"" << safePresetName << "\", \"category\": \"Keyboard        \", \"categoryIndex\": 0, ";
+	json << "\"name\": \"" << safePresetName << "\", \"category\": \"" << categoryName << "\", \"categoryIndex\": " << categoryId << ", ";
 	json << "\"author\": \"\", ";
 }
 
@@ -384,15 +422,15 @@ void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::st
 	const std::string& targetLetter, std::ostream& out_stream)
 {
 	const auto mode = EPatchMode::Program;
-	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
-	jsonWriteHeaderBegin(out_stream, presetName);
-	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
-
 	auto& content = m_dictProgParams;
+	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
+
 	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
 	patchProgramUnusedValues(mode, content, "prog_");
-	jsonWriteDSPSettings(out_stream, content);
 
+	jsonWriteHeaderBegin(out_stream, presetName, mode, content);
+	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
+	jsonWriteDSPSettings(out_stream, content);
 	jsonWriteEnd(out_stream, "program");
 }
 
@@ -817,7 +855,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_model);
 
-	jsonWriteHeaderBegin(out_stream, presetName);
+	jsonWriteHeaderBegin(out_stream, presetName, EPatchMode::Combi, content);
 	jsonWriteTimbers(out_stream, timbersToWrite);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Combi");
 	jsonWriteDSPSettings(out_stream, content);

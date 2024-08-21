@@ -84,11 +84,69 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 	rapidjson::Document generatedJson;
 	generatedJson.Parse(generatedStream.str().c_str());
 
-	auto refPresetName = std::string(refJson["general_program_information"]["name"].GetString());
-	auto generatedPresetName = std::string(generatedJson["general_program_information"]["name"].GetString());
+	auto refGeneralInfo = refJson["general_program_information"].GetObject();
+	auto generatedGeneralInfo = generatedJson["general_program_information"].GetObject();
 
-	refPresetName.erase(std::remove_if(refPresetName.begin(), refPresetName.end(), ::isspace), refPresetName.end());
-	generatedPresetName.erase(std::remove_if(generatedPresetName.begin(), generatedPresetName.end(), ::isspace), generatedPresetName.end());
+	auto removeStrSpaces = [](auto& str)
+	{
+		str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
+	};
+
+	auto compareFields = [&](auto& fieldName, auto& refField, auto& generatedField)
+	{
+		std::string refVal = refField.IsString() ? refField.GetString() : std::to_string(refField.GetInt());
+		std::string generatedVal = generatedField.IsString() ? generatedField.GetString() : std::to_string(generatedField.GetInt());
+
+		removeStrSpaces(refVal);
+		removeStrSpaces(generatedVal);
+
+		if (refVal != generatedVal)
+		{
+			std::stringstream ss;
+			ss << "\terror: General Info " << fieldName << ": " << refVal << " != " << generatedVal << "\n";
+			outLog.append(ss.str());
+
+			bErrors = true;
+		}
+	};
+
+	for (auto it = refGeneralInfo.begin(); it != refGeneralInfo.end(); it++)
+	{
+		auto fieldName = it->name.GetString();
+
+		if (std::string(fieldName).find("characters") != std::string::npos)
+			continue;
+
+		if (std::string(fieldName).find("timbres") != std::string::npos)
+		{
+			auto refTimbres = refGeneralInfo[fieldName].GetArray();
+			auto generatedTimbres = generatedGeneralInfo[fieldName].GetArray();
+
+			for (int timbreId = 0; timbreId < refTimbres.Size(); timbreId++)
+			{
+				auto refTimbre = refTimbres[timbreId].GetObject();
+				auto genTimbre = generatedTimbres[timbreId].GetObject();
+
+				for (auto itSubField = refTimbre.begin(); itSubField != refTimbre.end(); itSubField++)
+				{
+					auto subFieldName = itSubField->name.GetString();
+
+					if (std::string(subFieldName).find("bank_name") == std::string::npos)
+						compareFields(subFieldName, refTimbre[subFieldName], genTimbre[subFieldName]);
+				}
+			}
+		}
+		else
+		{
+			compareFields(fieldName, refGeneralInfo[fieldName], generatedGeneralInfo[fieldName]);
+		}
+	}
+
+	auto refPresetName = std::string(refGeneralInfo["name"].GetString());
+	auto generatedPresetName = std::string(generatedGeneralInfo["name"].GetString());
+
+	removeStrSpaces(refPresetName);
+	removeStrSpaces(generatedPresetName);
 	assert(refPresetName.compare(generatedPresetName.c_str()) == 0);
 
 	auto refParams = refJson["dsp_settings"].GetArray();

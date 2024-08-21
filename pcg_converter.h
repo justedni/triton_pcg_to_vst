@@ -103,6 +103,8 @@ private:
 	void patchProgramUnusedValues(EPatchMode mode, ParamList& content, const std::string& prefix);
 	void postPatchCombi(ParamList& content);
 
+	static std::pair<int, std::string> getCategory(EPatchMode mode, const ParamList& content);
+
 	struct Timber
 	{
 		std::string bankName;
@@ -110,7 +112,7 @@ private:
 		std::string programName;
 	};
 
-	static void jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName);
+	static void jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName, EPatchMode mode, const ParamList& content);
 	static void jsonWriteHeaderEnd(std::ostream& json, int presetId, int bankNumber,
 		const std::string& targetLetter, const std::string& mode);
 	static void jsonWriteEnd(std::ostream& json, const std::string& presetType);
