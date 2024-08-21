@@ -85,6 +85,8 @@ public:
 
 	static int getPCGValue(unsigned char* data, TritonStruct& info);
 
+	void utils_convertGMProgramsToBin(const std::string& sourceFolder, const std::string& outFile);
+
 private:
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
@@ -119,12 +121,23 @@ private:
 	static void jsonWriteDSPSettings(std::ostream& json, const ParamList& content);
 	static void jsonWriteTimbers(std::ostream& json, const std::vector<Timber>& timbers);
 
+	void convertProgramJsonToBin(PCG_Converter::ParamList& content, const std::string& programName, std::ostream& outStream);
+
 	const EnumKorgModel m_model;
 	KorgPCG* m_pcg = nullptr;
 	const std::string m_destFolder;
 
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;
+
+	struct GMBankData
+	{
+		uint8_t bankId;
+		uint8_t programId;
+		std::vector<char> data;
+	};
+	
+	static std::vector<GMBankData> m_gmPrograms;
 
 	static std::map<std::string, int> m_mapProgram_keyToId;
 	static std::map<std::string, int> m_mapCombi_keyToId;

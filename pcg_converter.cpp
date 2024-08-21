@@ -5,6 +5,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <filesystem>
 #include <iomanip>
 #include <array>
 #include <format>
@@ -16,6 +17,9 @@
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
 std::map<std::string, int> PCG_Converter::m_mapProgram_keyToId;
 std::map<std::string, int> PCG_Converter::m_mapCombi_keyToId;
+std::vector<PCG_Converter::GMBankData> PCG_Converter::m_gmPrograms;
+
+const int CustomProgramBufferSize = 540;
 
 PCG_Converter::PCG_Converter(
 	EnumKorgModel model,
@@ -25,9 +29,9 @@ PCG_Converter::PCG_Converter(
 	, m_pcg(pcg)
 	, m_destFolder(destFolder)
 {
+	initEffectConversions();
 	retrieveTemplatesData();
 	retrieveProgramNamesList();
-	initEffectConversions();
 }
 
 PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destFolder)
@@ -40,9 +44,17 @@ PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destF
 	m_mapProgramsNames = other.m_mapProgramsNames;
 }
 
+template<typename T>
+T readBytes(std::ifstream& stream)
+{
+	T a;
+	stream.read((char*)&a, sizeof(T));
+	return a;
+}
+
 void PCG_Converter::retrieveTemplatesData()
 {
-	auto parse = [](auto& path, auto& target)
+	auto parse = [](std::string path, auto& target)
 	{
 		std::ifstream ifs(path);
 		if (!ifs.is_open())
@@ -71,27 +83,49 @@ void PCG_Converter::retrieveTemplatesData()
 
 	static bool initIdMaps = true;
 
-	auto progDspSettings = templateProgDoc["dsp_settings"].GetArray();
-	for (auto& setting: progDspSettings)
+	auto getAllData = [](auto& doc, auto& out_dict, auto& out_map)
 	{
-		auto key = setting["key"].GetString();
-		auto id = setting["index"].GetInt();
-		m_dictProgParams[id] = ProgParam(key, setting["value"].GetInt());
-		if (initIdMaps)
-			m_mapProgram_keyToId[key] = id;
-	}
+		auto dspSettings = doc["dsp_settings"].GetArray();
+		for (auto& setting : dspSettings)
+		{
+			auto key = setting["key"].GetString();
+			auto id = setting["index"].GetInt();
+			out_dict[id] = ProgParam(key, setting["value"].GetInt());
+			if (initIdMaps)
+				out_map[key] = id;
+		}
+	};
 
-	auto combiDspSettings = templateCombiDoc["dsp_settings"].GetArray();
-	for (auto& setting : combiDspSettings)
-	{
-		auto key = setting["key"].GetString();
-		auto id = setting["index"].GetInt();
-		m_dictCombiParams[id] = ProgParam(key, setting["value"].GetInt());
-		if (initIdMaps)
-			m_mapCombi_keyToId[key] = id;
-	}
+	getAllData(templateProgDoc, m_dictProgParams, m_mapProgram_keyToId);
+	getAllData(templateCombiDoc, m_dictCombiParams, m_mapCombi_keyToId);
 
 	initIdMaps = false;
+
+	// Retrieving GM Program data
+	if (!m_gmPrograms.empty())
+		return;
+
+	std::ifstream file("GM_Data.bin", std::ios::in | std::ios::binary | std::ios::ate);
+	if (!file.is_open())
+		return;
+
+	std::streamsize fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	uint8_t numPrograms = readBytes<uint8_t>(file);
+
+	for (int i = 0; i < numPrograms; i++)
+	{
+		uint8_t bankId = readBytes<uint8_t>(file);
+		uint8_t programId = readBytes<uint8_t>(file);
+		uint16_t bufferSize = readBytes<uint16_t>(file);
+
+		std::vector<char> buffer(bufferSize);
+		if (!file.read(buffer.data(), bufferSize))
+			continue;
+
+		m_gmPrograms.emplace_back(bankId, programId, std::move(buffer));
+	}
 }
 
 void PCG_Converter::retrieveProgramNamesList()
@@ -624,7 +658,9 @@ void PCG_Converter::postPatchCombi(ParamList& content)
 	{
 		auto jsonName = utils::string_format("combi_timbre_%d_program_bank", timbre.id);
 		auto* found = findParamByKey(EPatchMode::Combi, content, jsonName);
-		if (found->value >= 17)
+		if (found->value >= 6 && found->value <= 16) // GM banks
+			found->value -= 2;
+		else if (found->value >= 17)
 			found->value--;
 	}
 }
@@ -834,19 +870,43 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 			programName = m_mapProgramsNames[uniqueId];
 		}
 
-		auto timberBankName = Helpers::getVSTProgramBankName(prog.bank, m_model);
-		timbersToWrite.emplace_back(timberBankName, prog.program, programName);
+		auto prefix = utils::string_format("combi_timbre_%d_", iTimber + 1);
 
-		if (auto* progBank = findDependencyBank(m_pcg, prog.bank))
+		auto processed = false;
+		auto* progBank = findDependencyBank(m_pcg, prog.bank);
+		if (progBank)
 		{
 			auto* progItem = progBank->item[prog.program];
 			auto depProgName = std::string((char*)progItem->data, 16);
-
-			auto prefix = utils::string_format("combi_timbre_%d_", iTimber + 1);
 			patchInnerProgram(content, prefix, progItem->data, depProgName, EPatchMode::Combi);
+			processed = true;
+		}
+		else
+		{
+			// GM Banks are not saved in the PCG, we need to retrieve it ourselves
+			auto found = std::find_if(m_gmPrograms.begin(), m_gmPrograms.end(), [&](auto& e) { return prog.bank == e.bankId && prog.program == e.programId; });
+			if (found != m_gmPrograms.end())
+			{
+				unsigned char* data = (unsigned char*)found->data.data();
+				auto depProgName = std::string((char*)data, 16);
+				patchInnerProgram(content, prefix, data, depProgName, EPatchMode::Combi);
+				programName = depProgName;
+				processed = true;
+			}
+			else
+			{
+				std::cout << std::format(" Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program);
+			}
+		}
+
+		if (processed)
+		{
 			patchProgramUnusedValues(mode, content, prefix);
 			patchCombiUnusedValues(content, prefix);
 		}
+
+		auto timberBankName = Helpers::getVSTProgramBankName(prog.bank, m_model);
+		timbersToWrite.emplace_back(timberBankName, prog.program, programName);
 
 		iTimber++;
 	}
@@ -861,4 +921,209 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 	jsonWriteDSPSettings(out_stream, content);
 
 	jsonWriteEnd(out_stream, "combi");
+}
+
+void PCG_Converter::convertProgramJsonToBin(PCG_Converter::ParamList& content, const std::string& programName, std::ostream& outStream)
+{
+	auto mode = EPatchMode::Program;
+
+	constexpr int bufferSize = CustomProgramBufferSize;
+	char buffer[bufferSize];
+	memset(buffer, 0x20, 16);
+	memset(buffer + 16, 0, bufferSize - 16);
+
+	assert(programName.length() <= 16);
+	memcpy_s(buffer, 16, programName.c_str(), programName.length());
+
+	auto swapTwoBytes = [](short value)
+	{
+		int firstByte = (value & 0x00FF) >> 0;
+		int secondByte = (value & 0xFF00) >> 8;
+		return (firstByte << 8 | secondByte);
+	};
+
+	auto swapThreeBytes = [](int value)
+	{
+		int firstByte = (value & 0x0000FF) >> 0;
+		int secondByte = (value & 0x00FF00) >> 8;
+		int thirdByte = (value & 0xFF0000) >> 16;
+
+		return (firstByte << 16 | secondByte << 8 | thirdByte);
+	};
+
+	auto saveValue = [&](auto& jsonName, auto& conversion)
+	{
+		auto* found = findParamByKey(mode, content, jsonName);
+		int offset = conversion.pcgOffset;
+
+		if (conversion.third.has_value())
+		{
+			unsigned int temp = swapThreeBytes(found->value << conversion.third->bit_start);
+			int* dest = (int*)(buffer + offset);
+			*dest |= temp;
+		}
+		else if (conversion.pcgLSBOffset >= 0)
+		{
+			unsigned short temp = swapTwoBytes(found->value << conversion.pcgLSBBitStart);
+			short* dest = (short*)(buffer + offset);
+			*dest |= temp;
+		}
+		else
+		{
+			unsigned char temp = found->value << conversion.pcgBitStart;
+			char* dest = buffer + offset;
+			*dest |= temp;
+		}
+
+		return found->value;
+	};
+
+	auto saveEffet = [&](auto effectId, auto& fxPrefix, auto startOffset)
+	{
+		if (effectId == 0) // No effect
+			return;
+
+		auto foundEntry = effect_conversions.find(effectId);
+		if (foundEntry != effect_conversions.end())
+		{
+			for (const auto& spec_conv : foundEntry->second)
+			{
+				if (spec_conv.jsonParam.empty())
+					continue;
+
+				auto info = TritonStruct(spec_conv);
+				info.pcgOffset += startOffset;
+				if (info.pcgLSBOffset != -1)
+					info.pcgLSBOffset += startOffset;
+				if (info.third.has_value())
+					info.third->offset += startOffset;
+
+				auto jsonName = utils::string_format("%s_specific_parameter_%s", fxPrefix.c_str(), spec_conv.jsonParam.c_str());
+				saveValue(jsonName, info);
+			}
+		}
+	};
+
+	std::string prefix = "prog_";
+
+	for (auto& conversion : program_conversions)
+	{
+		if (conversion.jsonParam.empty())
+			continue;
+
+		auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
+		saveValue(jsonName, conversion);
+	}
+
+	for (auto& conversion : shared_conversions)
+	{
+		if (conversion.jsonParam.empty())
+			continue;
+
+		auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
+		auto val = saveValue(jsonName, conversion);
+
+		if (conversion.jsonParam.find("effect_type") != std::string::npos)
+		{
+			int index = conversion.jsonParam.find("mfx1") != std::string::npos ? 1 : 2;
+			int startOffset = conversion.jsonParam.find("mfx1") != std::string::npos ? 136 : 156;
+			auto fxprefix = utils::string_format("%smfx%d", prefix.c_str(), index);
+			saveEffet(val, fxprefix, startOffset);
+		}
+	}
+
+	for (auto& ifx_struct : program_ifx_offsets)
+	{
+		for (auto& conversion : program_ifx_conversions)
+		{
+			if (conversion.jsonParam.empty())
+				continue;
+
+			TritonStruct info = TritonStruct(conversion);
+			info.pcgOffset += ifx_struct.startOffset;
+			if (info.pcgLSBOffset != -1)
+				info.pcgLSBOffset += ifx_struct.startOffset;
+
+			auto jsonName = utils::string_format("%sifx%d_%s", prefix.c_str(), ifx_struct.id, conversion.jsonParam.c_str());
+			auto val = saveValue(jsonName, info);
+
+			if (info.jsonParam.find("effect_type") != std::string::npos)
+			{
+				auto fxprefix = utils::string_format("%sifx%d", prefix.c_str(), ifx_struct.id);
+				saveEffet(val, fxprefix, ifx_struct.startOffset);
+			}
+		}
+	}
+
+	static const int NUM_OSC = 2;
+	for (int iOscId = 0; iOscId < NUM_OSC; iOscId++)
+	{
+		for (auto& conversion : program_osc_conversions)
+		{
+			if (conversion.jsonParam.empty())
+				continue;
+
+			TritonStruct info = TritonStruct(conversion);
+			if (iOscId == 1)
+			{
+				info.pcgOffset += 154;
+				if (info.pcgLSBOffset != -1)
+					info.pcgLSBOffset += 154;
+			}
+
+			auto jsonName = utils::string_format("%sosc_%d_%s", prefix.c_str(), iOscId + 1, conversion.jsonParam.c_str());
+			saveValue(jsonName, info);
+		}
+	}
+
+	outStream.write((char*)buffer, bufferSize);
+}
+
+void PCG_Converter::utils_convertGMProgramsToBin(const std::string& sourceFolder, const std::string& outFile)
+{
+	std::ofstream os(outFile, std::ofstream::binary);
+
+	uint8_t presetsCount = 0;
+	auto writeInt = [](std::ostream& os, auto val) { os.write(reinterpret_cast<const char*>(&val), sizeof(val)); };
+	writeInt(os, presetsCount);
+
+	for (const auto& entry : std::filesystem::directory_iterator(sourceFolder))
+	{
+		if (!entry.is_regular_file() || entry.path().extension() != ".patch")
+			continue;
+
+		auto filename = entry.path().filename().string();
+		auto pcg_bank = atoi(filename.substr(0, 2).c_str());
+		auto pcg_program = atoi(filename.substr(3, 3).c_str());
+
+		rapidjson::Document tempDoc;
+
+		std::ifstream ifs(entry.path().string());
+		assert(ifs.is_open());
+
+		rapidjson::IStreamWrapper refisw{ ifs };
+		tempDoc.ParseStream(refisw);
+
+		ParamList allParams;
+
+		auto dspSettings = tempDoc["dsp_settings"].GetArray();
+		for (auto& setting : dspSettings)
+		{
+			auto key = setting["key"].GetString();
+			auto id = setting["index"].GetInt();
+			allParams[id] = ProgParam(key, setting["value"].GetInt());
+		}
+
+		writeInt(os, (uint8_t)pcg_bank);
+		writeInt(os, (uint8_t)pcg_program);
+		constexpr int programSize = CustomProgramBufferSize;
+		writeInt(os, (uint16_t)programSize);
+
+		std::string programName = tempDoc["general_program_information"]["name"].GetString();
+		convertProgramJsonToBin(allParams, programName, os);
+		presetsCount++;
+	}
+
+	os.seekp(0);
+	writeInt(os, presetsCount);
 }
