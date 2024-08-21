@@ -14,6 +14,8 @@
 #include "include/rapidjson/istreamwrapper.h"
 
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
+std::map<std::string, int> PCG_Converter::m_mapProgram_keyToId;
+std::map<std::string, int> PCG_Converter::m_mapCombi_keyToId;
 
 PCG_Converter::PCG_Converter(
 	EnumKorgModel model,
@@ -67,17 +69,29 @@ void PCG_Converter::retrieveTemplatesData()
 		parse("Triton_Combi.patch", templateCombiDoc);
 	}
 
+	static bool initIdMaps = true;
+
 	auto progDspSettings = templateProgDoc["dsp_settings"].GetArray();
 	for (auto& setting: progDspSettings)
 	{
-		m_dictProgParams.emplace_back(setting["index"].GetInt(), setting["key"].GetString(), setting["value"].GetInt());
+		auto key = setting["key"].GetString();
+		auto id = setting["index"].GetInt();
+		m_dictProgParams[id] = ProgParam(key, setting["value"].GetInt());
+		if (initIdMaps)
+			m_mapProgram_keyToId[key] = id;
 	}
 
 	auto combiDspSettings = templateCombiDoc["dsp_settings"].GetArray();
 	for (auto& setting : combiDspSettings)
 	{
-		m_dictCombiParams.emplace_back(setting["index"].GetInt(), setting["key"].GetString(), setting["value"].GetInt());
+		auto key = setting["key"].GetString();
+		auto id = setting["index"].GetInt();
+		m_dictCombiParams[id] = ProgParam(key, setting["value"].GetInt());
+		if (initIdMaps)
+			m_mapCombi_keyToId[key] = id;
 	}
+
+	initIdMaps = false;
 }
 
 void PCG_Converter::retrieveProgramNamesList()
@@ -328,7 +342,8 @@ void PCG_Converter::jsonWriteTimbers(std::ostream& json, const std::vector<Timbe
 	for(auto& timber : timbers)
 	{
 		if (bAddComma) json << ", ";
-		json << "{\"timbre_name\":\"" << timber.programName << "\", \"bank_name\" : \"" << timber.bankName;
+		auto safeProgramName = getPresetNameSafe(timber.programName);
+		json << "{\"timbre_name\":\"" << safeProgramName << "\", \"bank_name\" : \"" << timber.bankName;
 		json << "\", \"program_number\" : " << timber.programId << "}";
 
 		if (!bAddComma) bAddComma = true;
@@ -359,7 +374,7 @@ void PCG_Converter::jsonWriteDSPSettings(std::ostream& json, const PCG_Converter
 	for (auto& param : content)
 	{
 		if (bAddComma) json << ", ";
-		json << "{\"index\": " << param.index << ", \"key\": \"" << param.key << "\", \"value\": " << param.value << "}";
+		json << "{\"index\": " << param.first << ", \"key\": \"" << param.second.key << "\", \"value\": " << param.second.value << "}";
 
 		if (!bAddComma) bAddComma = true;
 	}
@@ -368,13 +383,14 @@ void PCG_Converter::jsonWriteDSPSettings(std::ostream& json, const PCG_Converter
 void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
 	const std::string& targetLetter, std::ostream& out_stream)
 {
-	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Program, targetLetter, m_model);
+	const auto mode = EPatchMode::Program;
+	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
 	jsonWriteHeaderBegin(out_stream, presetName);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
 
 	auto& content = m_dictProgParams;
 	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
-	patchProgramUnusedValues(content, "prog_");
+	patchProgramUnusedValues(mode, content, "prog_");
 	jsonWriteDSPSettings(out_stream, content);
 
 	jsonWriteEnd(out_stream, "program");
@@ -388,7 +404,7 @@ void PCG_Converter::patchProgramToJson(int bankId, int presetId, const std::stri
 	patchProgramToStream(bankId, presetId, presetName, data, targetLetter, json);
 }
 
-void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix)
+void PCG_Converter::patchEffect(EPatchMode mode, PCG_Converter::ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix)
 {
 	if (effectId == 0) // No effect
 		return;
@@ -411,9 +427,7 @@ void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffse
 			auto jsonName = utils::string_format("%s_specific_parameter_%s", prefix.c_str(), spec_conv.jsonParam.c_str());
 			auto pcgVal = getPCGValue(data, info);
 
-			auto found = std::find_if(content.begin(), content.end(), [&jsonName](auto& e) { return e.key == jsonName; });
-			assert(found != content.end());
-			found->value = pcgVal;
+			patchValue(mode, content, jsonName, pcgVal);
 		}
 	}
 	else
@@ -423,10 +437,19 @@ void PCG_Converter::patchEffect(PCG_Converter::ParamList& content, int dataOffse
 	}
 }
 
-void PCG_Converter::patchValue(PCG_Converter::ParamList& content, const std::string& jsonName, int value)
+PCG_Converter::ProgParam* PCG_Converter::findParamByKey(EPatchMode mode, PCG_Converter::ParamList& content, const std::string& key)
 {
-	auto found = std::find_if(content.begin(), content.end(), [&jsonName](auto& e) { return e.key == jsonName; });
+	auto& m = (mode == EPatchMode::Combi) ? m_mapCombi_keyToId : m_mapProgram_keyToId;
+	auto id = m.find(key);
+	assert(id != m.end());
+	auto found = content.find(id->second);
 	assert(found != content.end());
+	return &(found->second);
+}
+
+void PCG_Converter::patchValue(EPatchMode mode, PCG_Converter::ParamList& content, const std::string& jsonName, int value)
+{
+	auto* found = findParamByKey(mode, content, jsonName);
 	found->value = value;
 }
 
@@ -462,20 +485,15 @@ void PCG_Converter::patchCombiUnusedValues(PCG_Converter::ParamList& content, co
 		{ "knob4", 0 },
 	};
 
-	for (auto& param : content)
+	for (auto& ignoredParam : ignoredParams)
 	{
-		for (auto& ignoredParam : ignoredParams)
-		{
-			std::string fullParamName = prefix + ignoredParam.name;
-			if (param.key == fullParamName)
-			{
-				param.value = ignoredParam.value;
-			}
-		}
+		std::string fullParamName = prefix + ignoredParam.name;
+		auto* found = findParamByKey(EPatchMode::Combi, content, fullParamName);
+		found->value = ignoredParam.value;
 	}
 }
 
-void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, const std::string& prefix)
+void PCG_Converter::patchProgramUnusedValues(EPatchMode mode, PCG_Converter::ParamList& content, const std::string& prefix)
 {
 	struct NameValue { std::string name; int value; };
 
@@ -497,23 +515,27 @@ void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, 
 		{ { "osc_2_low_sample_no.", 4095 }, {{ "osc_2_low_sample_no.", 999 }} }, // N/A patch
 	};
 
-	for (auto& param : content)
+	if (mode == EPatchMode::Program || prefix.find("combi_timbre") != std::string::npos)
 	{
 		for (auto& patch : allPatches)
 		{
-			if (param.key == fullParamName(patch.param.name) && param.value == patch.param.value)
+			auto paramName = fullParamName(patch.param.name);
+			auto* found = findParamByKey(mode, content, paramName);
+			if (found->value == patch.param.value)
 			{
 				for (auto& paramToUpdate : patch.paramsToUpdate)
 				{
 					std::string targetName = fullParamName(paramToUpdate.name);
-					auto found = std::find_if(content.begin(), content.end(), [&targetName](auto& e) { return e.key == targetName; });
-					assert(found != content.end());
-					found->value = paramToUpdate.value;
+					auto* foundTarget = findParamByKey(mode, content, targetName);
+					foundTarget->value = paramToUpdate.value;
 				}
 			}
 		}
+	}
 
-		// Patching knobs default value
+	// Patching knobs default value (only for program or global combi, not timber)
+	if (prefix.find("combi_timbre") == std::string::npos)
+	{
 		for (int i = 1; i <= 4; i++)
 		{
 			std::string paramName;
@@ -522,14 +544,18 @@ void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, 
 			else
 				paramName = utils::string_format("%scommon_knob%d_assign_type", prefix.c_str(), i);
 
-			if (param.key == paramName) // 0:Off; 1-4: Assignable Knob; 5+: assigned params
+			auto* foundAssign = findParamByKey(mode, content, paramName);
+			auto assignedKnob = foundAssign->value;
 			{
 				std::string targetName = utils::string_format("%sknob%d", prefix.c_str(), i);
-				auto found = std::find_if(content.begin(), content.end(), [&targetName](auto& e) { return e.key == targetName; });
-				assert(found != content.end());
+				auto* found = findParamByKey(mode, content, targetName);
 
-				switch (param.value)
+				// 0:Off; 1-4: Assignable Knob; 5+: assigned params
+				switch (assignedKnob)
 				{
+				case 7: // Volume
+					found->value = 100;
+					break;
 				case 10: // Expression
 					found->value = 127;
 					break;
@@ -554,7 +580,18 @@ void PCG_Converter::patchProgramUnusedValues(PCG_Converter::ParamList& content, 
 	}
 }
 
-void PCG_Converter::patchSharedConversions(PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data)
+void PCG_Converter::postPatchCombi(ParamList& content)
+{
+	for (auto& timbre : combi_timbres)
+	{
+		auto jsonName = utils::string_format("combi_timbre_%d_program_bank", timbre.id);
+		auto* found = findParamByKey(EPatchMode::Combi, content, jsonName);
+		if (found->value >= 17)
+			found->value--;
+	}
+}
+
+void PCG_Converter::patchSharedConversions(EPatchMode mode, PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data)
 {
 	for (auto& conversion : shared_conversions)
 	{
@@ -563,14 +600,14 @@ void PCG_Converter::patchSharedConversions(PCG_Converter::ParamList& content, co
 
 		auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
 		auto pcgVal = getPCGValue(data, conversion);
-		patchValue(content, jsonName, pcgVal);
+		patchValue(mode, content, jsonName, pcgVal);
 
 		if (conversion.jsonParam.find("effect_type") != std::string::npos)
 		{
 			int index = conversion.jsonParam.find("mfx1") != std::string::npos ? 1 : 2;
 			int startOffset = conversion.jsonParam.find("mfx1") != std::string::npos ? 136 : 156;
 			auto fxprefix = utils::string_format("%smfx%d", prefix.c_str(), index);
-			patchEffect(content, startOffset, data, pcgVal, fxprefix);
+			patchEffect(mode, content, startOffset, data, pcgVal, fxprefix);
 		}
 	}
 
@@ -589,12 +626,12 @@ void PCG_Converter::patchSharedConversions(PCG_Converter::ParamList& content, co
 			auto jsonName = utils::string_format("%sifx%d_%s", prefix.c_str(), ifx_struct.id, conversion.jsonParam.c_str());
 			auto pcgVal = getPCGValue(data, info);
 
-			patchValue(content, jsonName, pcgVal);
+			patchValue(mode, content, jsonName, pcgVal);
 
 			if (info.jsonParam.find("effect_type") != std::string::npos)
 			{
 				auto fxprefix = utils::string_format("%sifx%d", prefix.c_str(), ifx_struct.id);
-				patchEffect(content, ifx_struct.startOffset, data, pcgVal, fxprefix);
+				patchEffect(mode, content, ifx_struct.startOffset, data, pcgVal, fxprefix);
 			}
 		}
 	}
@@ -610,12 +647,12 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 
 		auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
 		auto pcgVal = getPCGValue(data, conversion);
-		patchValue(content, jsonName, pcgVal);
+		patchValue(mode, content, jsonName, pcgVal);
 	}
 
 	if (mode == EPatchMode::Program) // Program shared data (IFX, MFX, Valve..) not used in Combi mode
 	{
-		patchSharedConversions(content, prefix, data);
+		patchSharedConversions(mode, content, prefix, data);
 
 		if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
 		{
@@ -627,7 +664,7 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 				auto pcgVal = getPCGValue(data, conversion);
 				auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
 
-				patchValue(content, jsonName, pcgVal);
+				patchValue(mode, content, jsonName, pcgVal);
 			}
 		}
 	}
@@ -654,7 +691,7 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 			if (conversion.optionalConverter)
 				pcgVal = conversion.optionalConverter(pcgVal, jsonName, data);
 
-			patchValue(content, jsonName, pcgVal);
+			patchValue(mode, content, jsonName, pcgVal);
 		}
 	}
 }
@@ -683,10 +720,8 @@ void PCG_Converter::patchToStream(EPatchMode mode, int bankId, int presetId, con
 void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::string& presetName, unsigned char* data,
 		const std::string& targetLetter, std::ostream& out_stream)
 {
-	auto msg = utils::string_format("%s::%d Patching %s\n", Helpers::bankIdToLetter(bankId).c_str(), presetId, presetName.c_str());
-	std::cout << msg;
-
 	auto& content = m_dictCombiParams;
+	const auto mode = EPatchMode::Combi;
 
 	for (auto& conversion : combi_conversions)
 	{
@@ -694,10 +729,10 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 			continue;
 
 		auto pcgVal = getPCGValue(data, conversion);
-		patchValue(content, conversion.jsonParam, pcgVal);
+		patchValue(mode, content, conversion.jsonParam, pcgVal);
 	}
 
-	patchSharedConversions(content, "combi_", data);
+	patchSharedConversions(mode, content, "combi_", data);
 
 	for (auto& conversion : triton_extreme_conversions)
 	{
@@ -706,7 +741,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 		auto jsonName = utils::string_format("combi_%s", conversion.jsonParam.c_str());
 		auto pcgVal = getPCGValue(data, conversion);
-		patchValue(content, jsonName, pcgVal);
+		patchValue(mode, content, jsonName, pcgVal);
 	}
 
 	std::array<PCG_Converter::Prog, 8> associatedPrograms;
@@ -726,13 +761,13 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 			{
 				timbreInfo.pcgLSBOffset += timbre.startOffset;
 			}
-			
+
 			auto pcgVal = getPCGValue(data, timbreInfo);
 
 			if (conversion.optionalConverter)
 				pcgVal = conversion.optionalConverter(pcgVal, jsonName, data);
 
-			patchValue(content, jsonName, pcgVal);
+			patchValue(mode, content, jsonName, pcgVal);
 
 			if (conversion.jsonParam.find("program_no") != std::string::npos)
 			{
@@ -746,7 +781,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 	}
 
 	// Global fields to patch (IFX...)
-	patchProgramUnusedValues(content, "combi_");
+	patchProgramUnusedValues(mode, content, "combi_");
 
 	std::vector<Timber> timbersToWrite;
 
@@ -771,12 +806,14 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 			auto prefix = utils::string_format("combi_timbre_%d_", iTimber + 1);
 			patchInnerProgram(content, prefix, progItem->data, depProgName, EPatchMode::Combi);
-			patchProgramUnusedValues(content, prefix);
+			patchProgramUnusedValues(mode, content, prefix);
 			patchCombiUnusedValues(content, prefix);
 		}
 
 		iTimber++;
 	}
+
+	postPatchCombi(content);
 
 	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_model);
 

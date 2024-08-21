@@ -60,7 +60,6 @@ public:
 
 	struct ProgParam
 	{
-		int index = -1;
 		std::string key;
 		int value = 0;
 	};
@@ -90,17 +89,19 @@ private:
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
 
-	typedef std::vector<ProgParam> ParamList;
+	typedef std::map<int, ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
-	void patchSharedConversions(ParamList& content, const std::string& prefix, unsigned char* data);
-	void patchEffect(ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix);
+	void patchSharedConversions(EPatchMode mode, ParamList& content, const std::string& prefix, unsigned char* data);
+	void patchEffect(EPatchMode mode, ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix);
 
 	KorgBank* findDependencyBank(KorgPCG* pcg, int depBank);
 
-	void patchValue(ParamList& content, const std::string& jsonName, int value);
+	ProgParam* findParamByKey(EPatchMode mode, PCG_Converter::ParamList& content, const std::string& key);
+	void patchValue(EPatchMode mode, ParamList& content, const std::string& jsonName, int value);
 
-	void patchCombiUnusedValues(PCG_Converter::ParamList& content, const std::string& prefix);
-	void patchProgramUnusedValues(ParamList& content, const std::string& prefix);
+	void patchCombiUnusedValues(ParamList& content, const std::string& prefix);
+	void patchProgramUnusedValues(EPatchMode mode, ParamList& content, const std::string& prefix);
+	void postPatchCombi(ParamList& content);
 
 	struct Timber
 	{
@@ -122,6 +123,9 @@ private:
 
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;
+
+	static std::map<std::string, int> m_mapProgram_keyToId;
+	static std::map<std::string, int> m_mapCombi_keyToId;
 
 	std::map<std::string, std::string> m_mapProgramsNames;
 
