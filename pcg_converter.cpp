@@ -17,7 +17,9 @@
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
 std::map<std::string, int> PCG_Converter::m_mapProgram_keyToId;
 std::map<std::string, int> PCG_Converter::m_mapCombi_keyToId;
-std::vector<PCG_Converter::GMBankData> PCG_Converter::m_gmPrograms;
+
+std::vector<char> PCG_Converter::m_gmData;
+std::vector<PCG_Converter::GMBankData> PCG_Converter::m_mappedGMInfo;
 
 const int CustomProgramBufferSize = 540;
 
@@ -31,6 +33,7 @@ PCG_Converter::PCG_Converter(
 {
 	initEffectConversions();
 	retrieveTemplatesData();
+	retrieveGMData();
 	retrieveProgramNamesList();
 }
 
@@ -100,31 +103,75 @@ void PCG_Converter::retrieveTemplatesData()
 	getAllData(templateCombiDoc, m_dictCombiParams, m_mapCombi_keyToId);
 
 	initIdMaps = false;
+}
 
-	// Retrieving GM Program data
-	if (!m_gmPrograms.empty())
+void PCG_Converter::retrieveGMData()
+{
+	if (!m_mappedGMInfo.empty())
 		return;
 
-	std::ifstream file("GM_Data.bin", std::ios::in | std::ios::binary | std::ios::ate);
+	std::ifstream file("Factory_GM_Data.bin", std::ios::in | std::ios::binary | std::ios::ate);
 	if (!file.is_open())
 		return;
 
 	std::streamsize fileSize = file.tellg();
 	file.seekg(0, std::ios::beg);
 
-	uint8_t numPrograms = readBytes<uint8_t>(file);
+	m_gmData.resize(fileSize);
+	file.read(m_gmData.data(), fileSize);
 
-	for (int i = 0; i < numPrograms; i++)
+	static std::vector<std::string> kDrumKitNames = {
+		"STANDARD", "ROOM", "POWER", "ELECTRONIC", "ANALOG", "JAZZ", "BRUSH", "ORCHESTRA", "SFX" };
+
+	auto removeStrSpaces = [](auto& str)
 	{
-		uint8_t bankId = readBytes<uint8_t>(file);
-		uint8_t programId = readBytes<uint8_t>(file);
-		uint16_t bufferSize = readBytes<uint16_t>(file);
+		const auto strEnd = str.find_last_not_of(" ");
+		return str.substr(0, strEnd + 1);
+	};
 
-		std::vector<char> buffer(bufferSize);
-		if (!file.read(buffer.data(), bufferSize))
-			continue;
+	struct GMPreset {
+		std::string presetName;
+		int dataOffset = 0;
+	};
+	std::vector<GMPreset> gmPresetsInfo;
 
-		m_gmPrograms.emplace_back(bankId, programId, std::move(buffer));
+	constexpr const int regularChunkSize = 540;
+	constexpr const int drumkitChunkSize = 4112;
+
+	int currentOffset = 0;
+	char* ptr = m_gmData.data();
+	while (currentOffset < fileSize)
+	{
+		auto presetName = std::string(ptr, 16);
+		gmPresetsInfo.emplace_back(presetName, currentOffset);
+
+		if (std::find(kDrumKitNames.begin(), kDrumKitNames.end(), removeStrSpaces(presetName)) != kDrumKitNames.end())
+		{
+			ptr += drumkitChunkSize;
+			currentOffset += drumkitChunkSize;
+		}
+		else
+		{
+			ptr += regularChunkSize;
+			currentOffset += regularChunkSize;
+		}
+	}
+
+	int currentId = 0;
+	for (auto& info : m_gmInfo)
+	{
+		auto& letter = info.bank;
+		auto* bankDef = Helpers::findBankDef([&letter](auto& e) { return e.name == letter; });
+		assert(bankDef);
+
+		auto bankId = bankDef->shortId;
+		auto programId = info.id - 1;
+		auto name = removeStrSpaces(info.name);
+		auto factoryProgram = std::find_if(gmPresetsInfo.begin(), gmPresetsInfo.end(),
+			[&](auto& e) { return removeStrSpaces(e.presetName) == name; });
+		assert(factoryProgram != gmPresetsInfo.end());
+
+		m_mappedGMInfo.emplace_back(bankId, programId, factoryProgram->dataOffset);
 	}
 }
 
@@ -1031,10 +1078,16 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 		else
 		{
 			// GM Banks are not saved in the PCG, we need to retrieve it ourselves
-			auto found = std::find_if(m_gmPrograms.begin(), m_gmPrograms.end(), [&](auto& e) { return prog.bank == e.bankId && prog.program == e.programId; });
-			if (found != m_gmPrograms.end())
+			auto found = std::find_if(m_mappedGMInfo.begin(), m_mappedGMInfo.end(), [&](auto& e) { return prog.bank == e.bankId && prog.program == e.programId; });
+			if (found == m_mappedGMInfo.end() && prog.bank > 6)
 			{
-				unsigned char* data = (unsigned char*)found->data.data();
+				// No specific variation for that GM bank, try to fallback to regular GM bank instead
+				found = std::find_if(m_mappedGMInfo.begin(), m_mappedGMInfo.end(), [&](auto& e) { return e.bankId == 6 && prog.program == e.programId; });
+			}
+			
+			if (found != m_mappedGMInfo.end())
+			{
+				unsigned char* data = (unsigned char*)m_gmData.data() + found->dataOffset;
 				auto depProgName = std::string((char*)data, 16);
 				patchInnerProgram(content, prefix, data, depProgName, EPatchMode::Combi);
 				programName = depProgName;

@@ -138,6 +138,7 @@
     <ClCompile Include="pcg_converter_programs.cpp" />
     <ClCompile Include="pcg_converter.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="pcg_convert_gm.cpp" />
     <ClCompile Include="unit_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +158,11 @@
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <CopyFileToFolders Include="Templates\Triton_Program.patch">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="Templates\Factory_GM_Data.bin">
       <FileType>Document</FileType>
     </CopyFileToFolders>
   </ItemGroup>

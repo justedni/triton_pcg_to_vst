@@ -90,6 +90,7 @@ public:
 private:
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
+	void retrieveGMData();
 
 	typedef std::map<int, ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
@@ -132,14 +133,24 @@ private:
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;
 
+	static std::vector<char> m_gmData;
+
+	struct GMInfo
+	{
+		std::string bank;
+		int id;
+		std::string osc;
+		std::string name;
+	};
+	static std::vector<GMInfo> m_gmInfo;
+
 	struct GMBankData
 	{
 		uint8_t bankId;
 		uint8_t programId;
-		std::vector<char> data;
+		int dataOffset = 0;
 	};
-	
-	static std::vector<GMBankData> m_gmPrograms;
+	static std::vector<GMBankData> m_mappedGMInfo;
 
 	static std::map<std::string, int> m_mapProgram_keyToId;
 	static std::map<std::string, int> m_mapCombi_keyToId;
