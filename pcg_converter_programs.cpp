@@ -103,7 +103,7 @@ std::vector<TritonStruct> PCG_Converter::program_conversions = {
 	{ "  Bottom Velocity"					, "arpeggiator_bottom_velocity", 203, 0, 7 },
 };
 
-int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data)
+int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data)
 {
 
 	switch (pcgBank)

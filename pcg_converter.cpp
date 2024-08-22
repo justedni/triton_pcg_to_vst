@@ -460,7 +460,8 @@ void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::st
 	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
 
 	patchInnerProgram(content, "prog_", data, presetName, mode);
-	patchArpeggiator(content, "prog_user_arp_", "prog_arpeggiator_pattern_no.", data, mode),
+	patchArpeggiator(content, "prog_user_arp_", "prog_arpeggiator_pattern_no.", data, mode);
+	patchDrumKit(content, "prog_", data, mode);
 	patchProgramUnusedValues(mode, content, "prog_");
 
 	jsonWriteHeaderBegin(out_stream, presetName, mode, content);
@@ -793,6 +794,70 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 	}
 }
 
+void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data, EPatchMode mode)
+{
+	auto* foundRef = findParamByKey(mode, content, utils::string_format("%scommon_oscillator_mode", prefix.c_str()));
+	auto oscMode = foundRef->value;
+
+	if (oscMode != 2) // 0:Single 1:Double 2:Drum kit
+		return;
+
+	foundRef = findParamByKey(mode, content, utils::string_format("%sosc_1_hi_sample_no.", prefix.c_str()));
+
+	if (foundRef->value > 127)
+		foundRef->value -= 9;
+
+	const auto drumKitNo = foundRef->value;
+
+	auto idLookup = drumKitNo;
+
+	KorgBank* foundBank = nullptr;
+	for (int i = 0; i < m_pcg->Drumkit->count; i++)
+	{
+		auto* bank = m_pcg->Drumkit->bank[i];
+		if (idLookup >= bank->count)
+		{
+			idLookup -= bank->count;
+			continue;
+		}
+		foundBank = bank;
+		break;
+	}
+
+	if (!foundBank)
+	{
+		std::cout << std::format(" Couldn't find user Drum kit {}\n", drumKitNo);
+	}
+	else
+	{
+		auto* item = foundBank->item[idLookup];
+		auto* drumData = item->data;
+
+		int noteId = 0;
+		for (auto& note : drumkit_notes)
+		{
+			for (auto& conversion : drumkit_conversions)
+			{
+				auto jsonName = utils::string_format("%suser_drumkit_parameter_%s_%s", prefix.c_str(), note.c_str(), conversion.jsonParam.c_str());
+
+				TritonStruct info = TritonStruct(conversion);
+				info.pcgOffset += (32 * noteId);
+				if (info.pcgLSBOffset != -1)
+					info.pcgLSBOffset += (32 * noteId);
+
+				auto pcgVal = getPCGValue(drumData, info);
+
+				if (info.optionalConverter)
+					pcgVal = info.optionalConverter(pcgVal, jsonName, data);
+
+				patchValue(mode, content, jsonName, pcgVal);
+			}
+
+			noteId++;
+		}
+	}
+}
+
 void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const std::string& prefix, unsigned char* data,
 	const std::string& progName, EPatchMode mode)
 {
@@ -983,6 +1048,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 		if (processed)
 		{
+			patchDrumKit(content, prefix, data, mode);
 			patchProgramUnusedValues(mode, content, prefix);
 			patchCombiUnusedValues(content, prefix);
 		}

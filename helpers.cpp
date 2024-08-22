@@ -162,8 +162,8 @@ bool Helpers::isIgnoredParam(const std::string& paramName)
 {
 	auto contains = [&](const auto& str) { return paramName.find(str) != std::string::npos; };
 
-	return ((contains("combi_timbre") && contains("arpeggiator_parameter"))
-		|| (contains("combi_timbre") && contains("specific_parameter"))
-		|| contains("user_drumkit_parameter"));
+	return ((contains("combi_timbre") &&
+			(contains("arpeggiator_parameter") || contains("user_arp_pattern_name") || contains("specific_parameter")))
+		);
 }
 
