@@ -95,6 +95,7 @@ private:
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
 	void patchSharedConversions(EPatchMode mode, ParamList& content, const std::string& prefix, unsigned char* data);
 	void patchEffect(EPatchMode mode, ParamList& content, int dataOffset, unsigned char* data, int effectId, const std::string& prefix);
+	void patchArpeggiator(PCG_Converter::ParamList& content, const std::string& prefix, const std::string& patternNoKey, unsigned char* data, EPatchMode mode);
 
 	KorgBank* findDependencyBank(KorgPCG* pcg, int depBank);
 
@@ -151,6 +152,9 @@ private:
 	static std::vector<TritonStruct> program_osc_conversions;
 	static std::vector<SubParam> program_ifx_offsets;
 	static std::vector<TritonStruct> program_ifx_conversions;
+
+	static std::vector<TritonStruct> arpeggiator_global_conversions;
+	static std::vector<TritonStruct> arpeggiator_step_conversions;
 
 	static std::map<int, std::vector<TritonStruct>> effect_conversions;
 	static void initEffectConversions();

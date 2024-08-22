@@ -372,10 +372,10 @@ std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, const PC
 	case 6:  name = "Woodwind/Reed"; break;
 	case 7:  name = "Guitar/Plucked"; break;
 	case 8:  name = "Bass"; break;
-	case 9:  name = "Slow Synth"; break;
-	case 10: name = "Fast Synth"; break;
-	case 11: name = "Lead Synth"; break;
-	case 12: name = "Motion Synth"; break;
+	case 9:  name = "SlowSynth"; break;
+	case 10: name = "FastSynth"; break;
+	case 11: name = "LeadSynth"; break;
+	case 12: name = "MotionSynth"; break;
 	case 13: name = "SE"; break;
 	case 14: name = "Hit/Arpg"; break;
 	case 15: name = "Drums"; break;
@@ -459,7 +459,8 @@ void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::st
 	auto& content = m_dictProgParams;
 	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
 
-	patchInnerProgram(content, "prog_", data, presetName, EPatchMode::Program);
+	patchInnerProgram(content, "prog_", data, presetName, mode);
+	patchArpeggiator(content, "prog_user_arp_", "prog_arpeggiator_pattern_no.", data, mode),
 	patchProgramUnusedValues(mode, content, "prog_");
 
 	jsonWriteHeaderBegin(out_stream, presetName, mode, content);
@@ -550,11 +551,7 @@ void PCG_Converter::patchCombiUnusedValues(PCG_Converter::ParamList& content, co
 		{ "arpeggiator_top_velocity", 1 },
 		{ "arpeggiator_bottom_velocity", 1 },
 		{ "osc_1_low_start_offset", 0 },
-		{ "osc_2_low_start_offset", 0 },
-		{ "knob1", 0 },
-		{ "knob2", 0 },
-		{ "knob3", 0 },
-		{ "knob4", 0 },
+		{ "osc_2_low_start_offset", 0 }
 	};
 
 	for (auto& ignoredParam : ignoredParams)
@@ -706,6 +703,91 @@ void PCG_Converter::patchSharedConversions(EPatchMode mode, PCG_Converter::Param
 			{
 				auto fxprefix = utils::string_format("%sifx%d", prefix.c_str(), ifx_struct.id);
 				patchEffect(mode, content, ifx_struct.startOffset, data, pcgVal, fxprefix);
+			}
+		}
+	}
+}
+
+void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const std::string& prefix,
+	const std::string& patternNoKey, unsigned char* data, EPatchMode mode)
+{
+	auto* foundRef = findParamByKey(mode, content, patternNoKey);
+	auto patternNo = foundRef->value;
+
+	if (patternNo >= 0 && patternNo <= 4) // Factory patterns
+	{
+		auto patchEntry = [&](const auto& jsonName, auto val)
+		{
+			auto* found = findParamByKey(mode, content, jsonName);
+			found->value = val;
+		};
+
+		patchEntry(utils::string_format("%spattern_parameter_length", prefix.c_str()), 1);
+		patchEntry(utils::string_format("%spattern_parameter_tone_mode", prefix.c_str()), 0);
+		patchEntry(utils::string_format("%spattern_parameter_fixed_note_mode", prefix.c_str()), 0);
+
+		const int maxTones = 12;
+		for (int i = 1; i <= maxTones; i++)
+		{
+			patchEntry(utils::string_format("%spattern_parameter_tone_note_no.%d", prefix.c_str(), i), 0);
+		}
+
+		const int maxSteps = 48;
+		for (int i = 0; i < maxSteps; i++)
+		{
+			patchEntry(utils::string_format("%spattern_parameter_step_%d_gate", prefix.c_str(), i), 0);
+			patchEntry(utils::string_format("%spattern_parameter_step_%d_velocity", prefix.c_str(), i), 1);
+
+			for (int j = 0; j < maxTones; j++)
+			{
+				patchEntry(utils::string_format("%spattern_parameter_step_%d_tone_%d", prefix.c_str(), i, j), 0);
+			}
+		}
+	}
+	else
+	{
+		patternNo -= 5;
+
+		KorgBank* foundBank = nullptr;
+		for (int i = 0; i < m_pcg->Arpeggio->count; i++)
+		{
+			auto* arpBank = m_pcg->Arpeggio->bank[i];
+			if (patternNo >= arpBank->count)
+			{
+				patternNo -= arpBank->count;
+				continue;
+			}
+			foundBank = arpBank;
+			break;
+		}
+
+		if (!foundBank)
+		{
+			std::cout << std::format(" Couldn't find arp. pattern {}\n", foundRef->value);
+		}
+		else
+		{
+			auto* item = foundBank->item[patternNo];
+			auto* arpData = item->data;
+
+			for (auto& conversion : arpeggiator_global_conversions)
+			{
+				auto jsonName = utils::string_format("%spattern_parameter_%s", prefix.c_str(), conversion.jsonParam.c_str());
+				auto pcgVal = getPCGValue(arpData, conversion);
+				patchValue(mode, content, jsonName, pcgVal);
+			}
+
+			for (int iStep = 0; iStep < 48; iStep++)
+			{
+				for (auto& conversion : arpeggiator_step_conversions)
+				{
+					auto jsonName = utils::string_format("%spattern_parameter_step_%d_%s", prefix.c_str(), iStep, conversion.jsonParam.c_str());
+
+					TritonStruct info = TritonStruct(conversion);
+					info.pcgOffset += (6 * iStep);
+					auto pcgVal = getPCGValue(arpData, info);
+					patchValue(mode, content, jsonName, pcgVal);
+				}
 			}
 		}
 	}
@@ -909,6 +991,15 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 		timbersToWrite.emplace_back(timberBankName, prog.program, programName);
 
 		iTimber++;
+	}
+
+	// Arpeggiators
+	for (int i = 0; i < 2; i++)
+	{
+		auto arp_letter = i == 0 ? "a" : "b";
+		auto prefix = utils::string_format("combi_user_arp_%s_", arp_letter);
+		auto patternJsonName = utils::string_format("combi_arpeggiator_%s_pattern_no.", arp_letter);
+		patchArpeggiator(content, prefix, patternJsonName, data, EPatchMode::Combi);
 	}
 
 	postPatchCombi(content);

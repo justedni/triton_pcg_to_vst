@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClCompile Include="alchemist.cpp" />
     <ClCompile Include="helpers.cpp" />
+    <ClCompile Include="pcg_converter_arpeggiator.cpp" />
     <ClCompile Include="pcg_converter_combis.cpp" />
     <ClCompile Include="pcg_converter_effects.cpp" />
     <ClCompile Include="pcg_converter_programs.cpp" />

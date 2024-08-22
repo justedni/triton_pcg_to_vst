@@ -160,9 +160,10 @@ std::string Helpers::createSubfolders(const std::string& destFolder, const std::
 
 bool Helpers::isIgnoredParam(const std::string& paramName)
 {
-	return (paramName.find("user_drumkit_parameter") != std::string::npos
-		|| paramName.find("arpeggiator_parameter") != std::string::npos
-		|| paramName.find("user_arp") != std::string::npos
-		);
+	auto contains = [&](const auto& str) { return paramName.find(str) != std::string::npos; };
+
+	return ((contains("combi_timbre") && contains("arpeggiator_parameter"))
+		|| (contains("combi_timbre") && contains("specific_parameter"))
+		|| contains("user_drumkit_parameter"));
 }
 
