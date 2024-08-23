@@ -34,6 +34,7 @@ PCG_Converter::PCG_Converter(
 	initEffectConversions();
 	retrieveTemplatesData();
 	retrieveGMData();
+	retrieveFactoryPCG();
 	retrieveProgramNamesList();
 }
 
@@ -71,10 +72,10 @@ void PCG_Converter::retrieveTemplatesData()
 	};
 
 	rapidjson::Document templateProgDoc;
-	parse("Program_Template.patch", templateProgDoc);
+	parse("Data\\PatchTemplate_Program.patch", templateProgDoc);
 
 	rapidjson::Document templateCombiDoc;
-	parse("Combi_Template.patch", templateCombiDoc);
+	parse("Data\\PatchTemplate_Combi.patch", templateCombiDoc);
 
 	static bool initIdMaps = true;
 
@@ -102,7 +103,7 @@ void PCG_Converter::retrieveGMData()
 	if (!m_mappedGMInfo.empty())
 		return;
 
-	std::ifstream file("Factory_GM_Data.bin", std::ios::in | std::ios::binary | std::ios::ate);
+	std::ifstream file("Data\\Factory_GM_Programs.bin", std::ios::in | std::ios::binary | std::ios::ate);
 	if (!file.is_open())
 		return;
 
@@ -164,6 +165,27 @@ void PCG_Converter::retrieveGMData()
 		assert(factoryProgram != gmPresetsInfo.end());
 
 		m_mappedGMInfo.emplace_back(bankId, programId, factoryProgram->dataOffset);
+	}
+}
+
+void PCG_Converter::retrieveFactoryPCG()
+{
+	EnumKorgModel model;
+	KorgPCG* pcg = nullptr;
+
+	if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
+		pcg = LoadTritonPCG("Data\\Factory_TritonExtreme.PCG", model);
+	else
+		pcg = LoadTritonPCG("Data\\Factory_Triton.PCG", model);
+
+	if (!pcg)
+	{
+		std::cerr << "Input PCG file is invalid or corrupted!\n";
+	}
+	else
+	{
+		assert(model == m_pcg->model);
+		m_factoryPcg = pcg;
 	}
 }
 
@@ -254,6 +276,9 @@ void PCG_Converter::convertCombis(const std::vector<std::string>& letters)
 		{
 			auto* item = bank->item[jPreset];
 			auto name = std::string((char*)item->data, 16);
+
+			auto msg = utils::string_format("Combi %s::%d Patching %s\n", Helpers::bankIdToLetter(bank->bank).c_str(), jPreset, name.c_str());
+			std::cout << msg;
 
 			patchCombiToJson(bank->bank, jPreset, name, item->data, userFolder, targetLetter);
 		}
@@ -793,12 +818,31 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 	}
 	else
 	{
+		KorgBanks* arpBanks = m_pcg->Arpeggio;
+		if (!m_pcg->Arpeggio)
+		{
+			static bool bWarnAboutArppegios = true;
+			if (bWarnAboutArppegios)
+			{
+				std::cout << "\tImportant: no user arpeggiator patterns are stored in this PCG -> defaulting to factory PCG\n";
+				std::cout << "\tThis message is only printed once.\n";
+				bWarnAboutArppegios = false;
+			}
+			arpBanks = m_factoryPcg->Arpeggio;
+
+			if (!arpBanks)
+			{
+				std::cerr << "\tFactory PCG doesn't contain user arpeggiators!";
+				return;
+			}
+		}
+
 		patternNo -= 5;
 
 		KorgBank* foundBank = nullptr;
-		for (uint32_t i = 0; i < m_pcg->Arpeggio->count; i++)
+		for (uint32_t i = 0; i < arpBanks->count; i++)
 		{
-			auto* arpBank = m_pcg->Arpeggio->bank[i];
+			auto* arpBank = arpBanks->bank[i];
 			if (patternNo >= arpBank->count)
 			{
 				patternNo -= arpBank->count;
@@ -810,7 +854,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 
 		if (!foundBank)
 		{
-			std::cout << std::format(" Couldn't find arp. pattern {}\n", foundRef->value);
+			std::cout << std::format(" Couldn't find arp. pattern {} in PCG\n", foundRef->value);
 		}
 		else
 		{
@@ -855,12 +899,31 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 	const auto drumKitNo = foundRef->value;
 
+	KorgBanks* drumkitBanks = m_pcg->Drumkit;
+	if (!m_pcg->Drumkit)
+	{
+		static bool bWarnAboutDrumkits = true;
+		if (bWarnAboutDrumkits)
+		{
+			std::cout << "\tImportant: no user Drum Kits are stored in this PCG -> defaulting to factory PCG\n";
+			std::cout << "\tThis message is only printed once.\n";
+			bWarnAboutDrumkits = false;
+		}
+		drumkitBanks = m_factoryPcg->Drumkit;
+
+		if (!drumkitBanks)
+		{
+			std::cerr << "\tFactory PCG doesn't contain user Drum Kits!";
+			return;
+		}
+	}
+
 	uint32_t idLookup = drumKitNo;
 
 	KorgBank* foundBank = nullptr;
-	for (uint32_t i = 0; i < m_pcg->Drumkit->count; i++)
+	for (uint32_t i = 0; i < drumkitBanks->count; i++)
 	{
-		auto* bank = m_pcg->Drumkit->bank[i];
+		auto* bank = drumkitBanks->bank[i];
 		if (idLookup >= bank->count)
 		{
 			idLookup -= bank->count;
@@ -893,8 +956,8 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 				auto pcgVal = getPCGValue(drumData, info);
 
-				if (info.optionalConverter)
-					pcgVal = info.optionalConverter(pcgVal, jsonName, data);
+				if (jsonName.find("higher_bank") != std::string::npos || jsonName.find("lower_bank") != std::string::npos)
+					pcgVal = convertOSCBank(pcgVal, jsonName, data);
 
 				patchValue(mode, content, jsonName, pcgVal);
 			}
@@ -964,8 +1027,8 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 			auto jsonName = utils::string_format("%sosc_%d_%s", prefix.c_str(), iOscId + 1, conversion.jsonParam.c_str());
 			auto pcgVal = getPCGValue(data, info);
 
-			if (conversion.optionalConverter)
-				pcgVal = conversion.optionalConverter(pcgVal, jsonName, data);
+			if (jsonName.find("hi_bank") != std::string::npos || jsonName.find("low_bank") != std::string::npos)
+				pcgVal = convertOSCBank(pcgVal, jsonName, data);
 
 			patchValue(mode, content, jsonName, pcgVal);
 		}
@@ -1040,8 +1103,8 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 			auto pcgVal = getPCGValue(data, timbreInfo);
 
-			if (conversion.optionalConverter)
-				pcgVal = conversion.optionalConverter(pcgVal, jsonName, data);
+			if (jsonName.find("hi_bank") != std::string::npos || jsonName.find("low_bank") != std::string::npos)
+				pcgVal = convertOSCBank(pcgVal, jsonName, data);
 
 			patchValue(mode, content, jsonName, pcgVal);
 

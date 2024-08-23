@@ -257,7 +257,7 @@ void doUnitTests()
 	auto processTests = [](const std::string& subfolder, auto type)
 	{
 		const std::string unitTestFolderRoot = "..\\..\\UnitTest\\" + subfolder + "\\";
-		const std::string refPCGPath = unitTestFolderRoot + "Ref.PCG";
+		const std::string refPCGPath = "Data\\Factory_" + subfolder + ".PCG";
 
 		EnumKorgModel model;
 		auto* pcg = LoadTritonPCG(refPCGPath.c_str(), model);

@@ -148,22 +148,30 @@
     <ClInclude Include="unit_tests.h" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Templates\Extreme_Combi.patch">
+    <CopyFileToFolders Include="Resources\Factory_GM_Programs.bin">
       <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Templates\Extreme_Program.patch">
+    <CopyFileToFolders Include="Resources\Factory_Triton.PCG">
       <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Templates\Triton_Combi.patch">
+    <CopyFileToFolders Include="Resources\Factory_TritonExtreme.PCG">
       <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Templates\Triton_Program.patch">
+    <CopyFileToFolders Include="Resources\PatchTemplate_Combi.patch">
       <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="Templates\Factory_GM_Data.bin">
+    <CopyFileToFolders Include="Resources\PatchTemplate_Program.patch">
       <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

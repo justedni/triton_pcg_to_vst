@@ -126,7 +126,7 @@ int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, uns
 
 	if (pcgBank == 1)
 	{
-		auto msg = std::format(" Unhandled Bank (RAM) ({})\n", paramName.c_str());
+		auto msg = std::format("\tUnhandled Bank (RAM) ({})\n", paramName.c_str());
 		std::cout << msg;
 		return pcgBank;
 	}
@@ -138,12 +138,12 @@ int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, uns
 }
 
 std::vector<TritonStruct> PCG_Converter::program_osc_conversions = {
-	{ "OSC 1 Multisample High Bank"					, "hi_bank", 232, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
+	{ "OSC 1 Multisample High Bank"					, "hi_bank", 232, 0, 7, EVarType::Unsigned },
 	{ "OSC 1 Multisample High Multisample/Drumkit"	, "hi_sample_no.", 230, 0, 5, EVarType::Unsigned, 231, 0, 7 },
 	{ "OSC 1 Multisample High Start Offset"			, "hi_start_offset", 230, 7, 7 },
 	{ "OSC 1 Multisample High Reverse"				, "hi_reverse", 230, 6, 6 },
 	{ "OSC 1 Multisample High Level"				, "hi_level", 233, 0, 7 },
-	{ "OSC 1 Multisample Low Bank"					, "low_bank", 236, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
+	{ "OSC 1 Multisample Low Bank"					, "low_bank", 236, 0, 7, EVarType::Unsigned},
 	{ "OSC 1 Multisample Low Multisample/Drumkit"	, "low_sample_no.", 234, 0, 5, EVarType::Unsigned, 235, 0, 7 },
 	{ "OSC 1 Multisample Low Start Offset"			, "low_start_offset", 234, 7, 7, EVarType::Unsigned },
 	{ "OSC 1 Multisample Low Reverse"				, "low_reverse", 234, 6, 6 },

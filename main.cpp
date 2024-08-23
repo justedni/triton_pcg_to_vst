@@ -7,6 +7,7 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 #include "unit_tests.h"
 
@@ -108,8 +109,20 @@ int main(int argc, const char* argv[])
 	auto& pcgPath = result[kPCG][0];
 	auto& destFolder = result[kOutFolder][0];
 
+	if (!std::filesystem::exists(pcgPath))
+	{
+		std::cerr << "Input PCG file doesn't exist on disk!\n";
+		return -1;
+	}
+
 	EnumKorgModel model;
 	auto* pcg = LoadTritonPCG(pcgPath.c_str(), model);
+
+	if (!pcg)
+	{
+		std::cerr << "Input PCG file is invalid or corrupted!\n";
+		return -1;
+	}
 
 	auto converter = PCG_Converter(
 		model,

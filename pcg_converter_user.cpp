@@ -57,7 +57,7 @@ std::vector<std::string> PCG_Converter::drumkit_notes = {
 
 
 std::vector<TritonStruct> PCG_Converter::drumkit_conversions = {
-	{ "" , "higher_bank"			, 16, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
+	{ "" , "higher_bank"			, 16, 0, 7, EVarType::Unsigned },
 	{ "" , "higher_start_offset"	, 17, 0, 0, EVarType::Unsigned },
 	{ "" , "higher_reverse"			, 17, 1, 1, EVarType::Unsigned },
 	{ "" , "higher_sample_no"		, 18, 0, 7, EVarType::Unsigned, 19, 0, 7 },
@@ -68,7 +68,7 @@ std::vector<TritonStruct> PCG_Converter::drumkit_conversions = {
 	{ "" , "higher_decay_level"		, 24, 0, 7, EVarType::Signed },
 	{ "" , "higher_cutoff_level"	, 25, 0, 7, EVarType::Signed },
 	{ "" , "higher_resonance_level"	, 26, 0, 7, EVarType::Signed },
-	{ "" , "lower_bank"				, 28, 0, 7, EVarType::Unsigned, -1, -1, -1, {}, convertOSCBank },
+	{ "" , "lower_bank"				, 28, 0, 7, EVarType::Unsigned },
 	{ "" , "lower_start_offset"		, 29, 0, 0, EVarType::Unsigned },
 	{ "" , "lower_reverse"			, 29, 1, 1, EVarType::Unsigned },
 	{ "" , "lower_sample_no"		, 30, 0, 7, EVarType::Unsigned, 31, 0, 7 },

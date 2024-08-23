@@ -35,8 +35,6 @@ struct TritonStruct
 	int pcgLSBBitEnd = -1;
 
 	std::optional<Byte> third;
-
-	std::function<int(int val, const std::string&, unsigned char*)> optionalConverter;
 };
 
 struct SubParam
@@ -91,6 +89,7 @@ private:
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
 	void retrieveGMData();
+	void retrieveFactoryPCG();
 
 	typedef std::map<int, ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
@@ -132,6 +131,8 @@ private:
 
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;
+
+	KorgPCG* m_factoryPcg = nullptr;
 
 	static std::vector<char> m_gmData;
 
