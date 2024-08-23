@@ -86,21 +86,21 @@ std::vector<TritonStruct> PCG_Converter::program_conversions = {
 	{ " Gate Control"						, "arpeggiator_gate_control", 190, 0, 7, EVarType::Signed },
 	{ " Velocity Control"					, "arpeggiator_velocity_control", 191, 0, 7, EVarType::Signed },
 	{ " Tempo"								, "arpeggiator_tempo", 192, 0, 7, EVarType::Unsigned },
-	{ "Switches On/Off Status  Arpeggiator"	, "arpeggiator_switch", 193, 0, 7 },
+	{ "Switches On/Off Status  Arpeggiator"	, "arpeggiator_switch", 193, 0, 7, EVarType::Unsigned },
 	{ "  Pattern"							, "arpeggiator_pattern_no.", 195, 5, 7, EVarType::Unsigned, 194, 0, 7 },
 	{ "  Resolution"						, "arpeggiator_resolution", 195, 2, 4, EVarType::Unsigned },
 	{ "  Octave"							, "arpeggiator_octave", 195, 0, 1, EVarType::Unsigned },
-	{ "  Gate"								, "arpeggiator_gate", 196, 0, 7 },
+	{ "  Gate"								, "arpeggiator_gate", 196, 0, 7, EVarType::Unsigned },
 	{ "  Velocity"							, "arpeggiator_velocity", 197, 0, 7, EVarType::Unsigned },
-	{ "  Swing"								, "arpeggiator_swing", 198, 0, 7 },
-	{ "  Sort"								, "arpeggiator_sort_onoff", 199, 0, 0 },
-	{ "  Latch"								, "arpeggiator_latch_onoff", 199, 1, 1 },
-	{ "  Key Sync"							, "arpeggiator_keysync_onoff", 199, 2, 2 },
-	{ "  Keyboard"							, "arpeggiator_keyboard_onoff", 199, 3, 3 },
-	{ "  Top Key"							, "arpeggiator_top_key", 200, 0, 7 },
-	{ "  Bottom Key"						, "arpeggiator_bottom_key", 201, 0, 7 },
-	{ "  Top Velocity"						, "arpeggiator_top_velocity", 202, 0, 7 },
-	{ "  Bottom Velocity"					, "arpeggiator_bottom_velocity", 203, 0, 7 },
+	{ "  Swing"								, "arpeggiator_swing", 198, 0, 7, EVarType::Signed },
+	{ "  Sort"								, "arpeggiator_sort_onoff", 199, 0, 0, EVarType::Unsigned },
+	{ "  Latch"								, "arpeggiator_latch_onoff", 199, 1, 1, EVarType::Unsigned },
+	{ "  Key Sync"							, "arpeggiator_keysync_onoff", 199, 2, 2, EVarType::Unsigned },
+	{ "  Keyboard"							, "arpeggiator_keyboard_onoff", 199, 3, 3, EVarType::Unsigned },
+	{ "  Top Key"							, "arpeggiator_top_key", 200, 0, 7, EVarType::Unsigned },
+	{ "  Bottom Key"						, "arpeggiator_bottom_key", 201, 0, 7, EVarType::Unsigned },
+	{ "  Top Velocity"						, "arpeggiator_top_velocity", 202, 0, 7, EVarType::Unsigned },
+	{ "  Bottom Velocity"					, "arpeggiator_bottom_velocity", 203, 0, 7, EVarType::Unsigned },
 };
 
 int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data)
@@ -132,7 +132,7 @@ int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, uns
 	}
 	else
 	{
-		assert(false, "Unknown bank");
+		assert(false && "Unknown bank");
 		return pcgBank;
 	}
 }

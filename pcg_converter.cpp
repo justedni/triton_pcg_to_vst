@@ -71,18 +71,10 @@ void PCG_Converter::retrieveTemplatesData()
 	};
 
 	rapidjson::Document templateProgDoc;
-	rapidjson::Document templateCombiDoc;
+	parse("Program_Template.patch", templateProgDoc);
 
-	if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
-	{
-		parse("Extreme_Program.patch", templateProgDoc);
-		parse("Extreme_Combi.patch", templateCombiDoc);
-	}
-	else
-	{
-		parse("Triton_Program.patch", templateProgDoc);
-		parse("Triton_Combi.patch", templateCombiDoc);
-	}
+	rapidjson::Document templateCombiDoc;
+	parse("Combi_Template.patch", templateCombiDoc);
 
 	static bool initIdMaps = true;
 
@@ -231,8 +223,10 @@ void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
 			auto* item = prog->item[j];
 			auto name = std::string((char*)item->data, 16);
 
-			auto msg = utils::string_format("%s::%d Patching %s\n", Helpers::bankIdToLetter(prog->bank).c_str(), j, name.c_str());
-			std::cout << msg;
+			std::stringstream msgStrm;
+			msgStrm << Helpers::bankIdToLetter(prog->bank) << ":" << std::setw(3) << std::setfill('0') << j;
+			msgStrm << " Patching " << name << "\n";
+			std::cout << msgStrm.str();
 
 			patchProgramToJson(prog->bank, j, name, item->data, userFolder, targetLetter);
 		}
@@ -390,17 +384,22 @@ std::string getPresetNameSafe(const std::string& presetName)
 		pos = safePresetName.find(backslash, pos + 1);
 	}
 
-	for (int i = positions.size() - 1; i >= 0; i--)
+	int total = static_cast<int>(positions.size());
+	if (total > 0)
 	{
-		safePresetName.replace(positions[i], backslash.size(), escapedBackslash);
+		for (int i = total - 1; i >= 0; i--)
+		{
+			safePresetName.replace(positions[i], backslash.size(), escapedBackslash);
+		}
 	}
 
 	return safePresetName;
 }
 
-std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, const PCG_Converter::ParamList& content)
+std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, EnumKorgModel model, const PCG_Converter::ParamList& content)
 {
 	const bool isCombi = (mode == EPatchMode::Combi);
+	const bool isTritonCombi = isCombi && model != EnumKorgModel::KORG_TRITON_EXTREME;
 	auto index = isCombi ? 5702 : 6474; // combi_category / prog_common_category
 	auto found = content.find(index);
 	assert(found != content.end());
@@ -412,20 +411,20 @@ std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, const PC
 	{
 	case 0:  name = "Keyboard"; break;
 	case 1:  name = "Organ"; break;
-	case 2:  name = "Bell/Mallet"; break;
+	case 2:  name = isTritonCombi ? "Bell/Mallet/Perc" : "Bell/Mallet"; break;
 	case 3:  name = "Strings"; break;
-	case 4:  name = "Vocal/Airy"; break;
-	case 5:  name = "Brass"; break;
-	case 6:  name = "Woodwind/Reed"; break;
+	case 4:  name = isTritonCombi ? "BrassReed" : "Vocal/Airy"; break;
+	case 5:  name = isTritonCombi ? "Orchestral" : "Brass"; break;
+	case 6:  name = isTritonCombi ? "World" : "Woodwind/Reed"; break;
 	case 7:  name = "Guitar/Plucked"; break;
-	case 8:  name = "Bass"; break;
-	case 9:  name = "SlowSynth"; break;
-	case 10: name = "FastSynth"; break;
-	case 11: name = "LeadSynth"; break;
-	case 12: name = "MotionSynth"; break;
-	case 13: name = "SE"; break;
-	case 14: name = "Hit/Arpg"; break;
-	case 15: name = "Drums"; break;
+	case 8:  name = isTritonCombi ? "Pads" : "Bass"; break;
+	case 9:  name = isTritonCombi ? "MotionSynth" : "SlowSynth"; break;
+	case 10: name = isTritonCombi ? "Synth" : "FastSynth"; break;
+	case 11: name = isTritonCombi ? "LeadSplits" : "LeadSynth"; break;
+	case 12: name = isTritonCombi ? "BassSplits" : "MotionSynth"; break;
+	case 13: name = isTritonCombi ? "Complex & SE" : "SE"; break;
+	case 14: name = isTritonCombi ? "RhythmicPattern" : "Hit/Arpg"; break;
+	case 15: name = isTritonCombi ? "Ds/Hits" : "Drums"; break;
 	default:
 		assert(false);
 	}
@@ -435,10 +434,10 @@ std::pair<int, std::string> PCG_Converter::getCategory(EPatchMode mode, const PC
 	return { categoryId, name };
 }
 
-void PCG_Converter::jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName, EPatchMode mode, const PCG_Converter::ParamList& content)
+void PCG_Converter::jsonWriteHeaderBegin(std::ostream& json, const std::string& presetName, EPatchMode mode, EnumKorgModel model, const PCG_Converter::ParamList& content)
 {
 	auto safePresetName = getPresetNameSafe(presetName);
-	auto [categoryId, categoryName] = getCategory(mode, content);
+	auto [categoryId, categoryName] = getCategory(mode, model, content);
 	json << "{\"version\": 1280, \"general_program_information\": {";
 	json << "\"name\": \"" << safePresetName << "\", \"category\": \"" << categoryName << "\", \"categoryIndex\": " << categoryId << ", ";
 	json << "\"author\": \"\", ";
@@ -511,7 +510,7 @@ void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::st
 	patchDrumKit(content, "prog_", data, mode);
 	patchProgramUnusedValues(mode, content, "prog_");
 
-	jsonWriteHeaderBegin(out_stream, presetName, mode, content);
+	jsonWriteHeaderBegin(out_stream, presetName, mode, m_pcg->model, content);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
 	jsonWriteDSPSettings(out_stream, content);
 	jsonWriteEnd(out_stream, "program");
@@ -760,7 +759,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 	const std::string& patternNoKey, unsigned char* data, EPatchMode mode)
 {
 	auto* foundRef = findParamByKey(mode, content, patternNoKey);
-	auto patternNo = foundRef->value;
+	uint32_t patternNo = foundRef->value;
 
 	if (patternNo >= 0 && patternNo <= 4) // Factory patterns
 	{
@@ -797,7 +796,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 		patternNo -= 5;
 
 		KorgBank* foundBank = nullptr;
-		for (int i = 0; i < m_pcg->Arpeggio->count; i++)
+		for (uint32_t i = 0; i < m_pcg->Arpeggio->count; i++)
 		{
 			auto* arpBank = m_pcg->Arpeggio->bank[i];
 			if (patternNo >= arpBank->count)
@@ -856,10 +855,10 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 	const auto drumKitNo = foundRef->value;
 
-	auto idLookup = drumKitNo;
+	uint32_t idLookup = drumKitNo;
 
 	KorgBank* foundBank = nullptr;
-	for (int i = 0; i < m_pcg->Drumkit->count; i++)
+	for (uint32_t i = 0; i < m_pcg->Drumkit->count; i++)
 	{
 		auto* bank = m_pcg->Drumkit->bank[i];
 		if (idLookup >= bank->count)
@@ -934,6 +933,15 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 
 				patchValue(mode, content, jsonName, pcgVal);
 			}
+		}
+		else
+		{
+			for (auto& conversion : triton_extreme_conversions)
+			{
+				auto jsonName = utils::string_format("%s%s", prefix.c_str(), conversion.jsonParam.c_str());
+				patchValue(mode, content, jsonName, 0);
+			}
+
 		}
 	}
 
@@ -1125,7 +1133,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_model);
 
-	jsonWriteHeaderBegin(out_stream, presetName, EPatchMode::Combi, content);
+	jsonWriteHeaderBegin(out_stream, presetName, EPatchMode::Combi, m_pcg->model, content);
 	jsonWriteTimbers(out_stream, timbersToWrite);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Combi");
 	jsonWriteDSPSettings(out_stream, content);

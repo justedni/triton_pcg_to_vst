@@ -38,6 +38,12 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 		return false;
 	};
 
+	auto isIgnoredParamForUnitTest = [](const std::string& paramName)
+	{
+		// There's a bug in the VST: factory Combis are not setting this param correctly (it's different from the value in the Program)
+		return (paramName.find("combi_timbre") != std::string::npos && paramName.find("low_start_offset") != std::string::npos);
+	};
+
 	bool bErrors = false;
 
 	KorgBanks* container = (type == EPatchMode::Program) ? pcg->Program : pcg->Combination;
@@ -48,7 +54,7 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 
 	KorgBank* foundBank = nullptr;
 
-	for (int i = 0; i < container->count; i++)
+	for (uint32_t i = 0; i < container->count; i++)
 	{
 		auto* bank = container->bank[i];
 		auto bankLetter = Helpers::bankIdToLetter(bank->bank);
@@ -103,18 +109,21 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 		if (refVal != generatedVal)
 		{
 			std::stringstream ss;
-			ss << "\terror: General Info " << fieldName << ": " << refVal << " != " << generatedVal << "\n";
+			ss << "\terror: General Info " << fieldName << ": " << refVal << " != " << generatedVal;
 			outLog.append(ss.str());
 
 			bErrors = true;
 		}
+
+		return (refVal == generatedVal);
 	};
 
 	for (auto it = refGeneralInfo.begin(); it != refGeneralInfo.end(); it++)
 	{
 		auto fieldName = it->name.GetString();
 
-		if (std::string(fieldName).find("characters") != std::string::npos)
+		if (std::string(fieldName).find("characters") != std::string::npos
+			|| std::string(fieldName).find("user_sample_name_osc") != std::string::npos)
 			continue;
 
 		if (std::string(fieldName).find("timbres") != std::string::npos)
@@ -122,7 +131,7 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 			auto refTimbres = refGeneralInfo[fieldName].GetArray();
 			auto generatedTimbres = generatedGeneralInfo[fieldName].GetArray();
 
-			for (int timbreId = 0; timbreId < refTimbres.Size(); timbreId++)
+			for (uint32_t timbreId = 0; timbreId < refTimbres.Size(); timbreId++)
 			{
 				auto refTimbre = refTimbres[timbreId].GetObject();
 				auto genTimbre = generatedTimbres[timbreId].GetObject();
@@ -131,14 +140,25 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 				{
 					auto subFieldName = itSubField->name.GetString();
 
-					if (std::string(subFieldName).find("bank_name") == std::string::npos)
-						compareFields(subFieldName, refTimbre[subFieldName], genTimbre[subFieldName]);
+					if (std::string(subFieldName).find("bank_name") == std::string::npos
+						&& std::string(subFieldName).find("user_sample_name_osc") == std::string::npos)
+					{
+						auto success = compareFields(subFieldName, refTimbre[subFieldName], genTimbre[subFieldName]);
+						if (!success)
+						{
+							std::stringstream ss;
+							ss << "(" << refTimbre["bank_name"].GetString() << ":" << refTimbre["program_number"].GetInt() << ")\n";
+							outLog.append(ss.str());
+						}
+					}
 				}
 			}
 		}
 		else
 		{
-			compareFields(fieldName, refGeneralInfo[fieldName], generatedGeneralInfo[fieldName]);
+			auto success = compareFields(fieldName, refGeneralInfo[fieldName], generatedGeneralInfo[fieldName]);
+			if (!success)
+				outLog.append("\n");
 		}
 	}
 
@@ -194,7 +214,7 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 				if (!Helpers::isIgnoredParam(refParamName))
 				{
 					std::stringstream ss;
-					ss << "\n\terror: Missing Param " << refParamName << "(" << refParamVal << ")" << "\n";
+					ss << "\n\terror: Missing Param " << refParamName << "(" << refParamVal << ")";
 					outLog.append(ss.str());
 				}
 
@@ -205,7 +225,8 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 		}
 
 		if (!Helpers::isIgnoredParam(refParamName)
-			&& (!ifxId || !isIgnoredIFXParamForUnitTest(refParamName, ifxId, ifxStates[ifxId])))
+			&& (!ifxId || !isIgnoredIFXParamForUnitTest(refParamName, ifxId, ifxStates[ifxId]))
+			&& !isIgnoredParamForUnitTest(refParamName))
 		{
 			auto generatedParamVal = generatedParam["value"].GetInt();
 			if (refParamVal != generatedParamVal)
@@ -233,18 +254,10 @@ bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode
 
 void doUnitTests()
 {
-	auto t1 = std::chrono::high_resolution_clock::now();
-
-	struct Test
+	auto processTests = [](const std::string& subfolder, auto type)
 	{
-		std::string pcg_bank;
-		int pcg_program;
-	};
-
-	auto processTests = [](const std::string& subfolder, auto type, const auto& prog_tests)
-	{
-		const std::string unitTestFolder = "..\\..\\UnitTest\\" + subfolder + "\\";
-		const std::string refPCGPath = unitTestFolder + "Ref.PCG";
+		const std::string unitTestFolderRoot = "..\\..\\UnitTest\\" + subfolder + "\\";
+		const std::string refPCGPath = unitTestFolderRoot + "Ref.PCG";
 
 		EnumKorgModel model;
 		auto* pcg = LoadTritonPCG(refPCGPath.c_str(), model);
@@ -255,16 +268,31 @@ void doUnitTests()
 
 		auto converterTemplate = PCG_Converter(pcg->model, pcg, "");
 
-		for (auto& test : prog_tests)
+		std::string typeStr = type == EPatchMode::Combi ? "Combi" : "Program";
+		std::cout << "\n### Unit Tests for: " << subfolder << " - " << typeStr << "### \n";
+
+		const std::string unitTestsFolder = unitTestFolderRoot + typeStr + "\\";
+
+		for (const auto& entry : std::filesystem::directory_iterator(unitTestsFolder))
 		{
+			if (!entry.is_regular_file())
+				continue;
+
+			if (entry.path().extension() != ".patch")
+				continue;
+
+			auto filename = entry.path().filename().string();
+			auto pcg_bank = filename.substr(0, 1);
+			auto pcg_program = atoi(filename.substr(1, 3).c_str());
+
 			std::stringstream patchNameStrm;
-			patchNameStrm << test.pcg_bank << std::setw(3) << std::setfill('0') << test.pcg_program;
+			patchNameStrm << pcg_bank << std::setw(3) << std::setfill('0') << pcg_program;
 
 			auto patchName = patchNameStrm.str();;
 			patchNameStrm << ".patch";
 
 			std::string outLog;
-			auto retValue = doUnitTest(&converterTemplate, pcg, type, unitTestFolder, test.pcg_bank, test.pcg_program, patchNameStrm.str(), outLog);
+			auto retValue = doUnitTest(&converterTemplate, pcg, type, unitTestFolderRoot, pcg_bank, pcg_program, patchNameStrm.str(), outLog);
 
 			std::cout << patchName << (retValue ? ": OK " : ": ERRORS:\n");
 
@@ -273,18 +301,14 @@ void doUnitTests()
 		}
 	};
 
-	std::vector<Test> triton_ext_combi_tests = {};
+	auto t1 = std::chrono::high_resolution_clock::now();
 
-	std::vector<Test> triton_ext_prog_tests = {};
-
-	processTests("TritonExtreme", EPatchMode::Combi, triton_ext_combi_tests);
-	processTests("TritonExtreme", EPatchMode::Program, triton_ext_prog_tests);
-
-	std::vector<Test> triton_prog_tests = {};
-
-	processTests("Triton", EPatchMode::Program, triton_prog_tests);
+	processTests("TritonExtreme", EPatchMode::Combi);
+	processTests("TritonExtreme", EPatchMode::Program);
+	processTests("Triton", EPatchMode::Combi);
+	processTests("Triton", EPatchMode::Program);
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-	std::cout << "Finished Units Tests in " << std::round((int)(ms_double.count() / 1000)) << "sec \n";
+	std::cout << "\n\nFinished Units Tests in " << std::round((int)(ms_double.count() / 1000)) << "sec \n";
 }

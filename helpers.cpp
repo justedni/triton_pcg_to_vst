@@ -45,7 +45,7 @@ std::string Helpers::pcgProgBankIdToLetter(int bankId)
 	if (found != bank_definitions.end())
 		return found->name;
 
-	assert(false, "Unknown bank Id");
+	assert(false && "Unknown bank Id");
 	return "?";
 }
 
@@ -55,7 +55,7 @@ std::string Helpers::bankIdToLetter(int bankId)
 	if (found != bank_definitions.end())
 		return found->name;
 
-	assert(false, "Unknown bank Id");
+	assert(false && "Unknown bank Id");
 	return "?";
 }
 
@@ -68,7 +68,7 @@ int Helpers::bankPcgIdToId(int bankId)
 		return found->regularId;
 	}
 
-	assert(false, "Unknown bank Id");
+	assert(false && "Unknown bank Id");
 	return -1;
 }
 
@@ -104,7 +104,7 @@ int Helpers::getVSTBankNumber(EPatchMode type, const std::string& letter, EnumKo
 	else if (letter == "D")
 		return startId + 3;
 
-	assert(false, "Unknown bank Id");
+	assert(false && "Unknown bank Id");
 	return -1;
 }
 
