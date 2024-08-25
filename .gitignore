@@ -1,5 +1,5 @@
 UnitTest/Triton
 UnitTest/TritonExtreme
-.vs/
-x64/
-PCGToVST/
+VS2022/.vs/
+bin/
+Intermediates/
