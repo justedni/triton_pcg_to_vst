@@ -142,6 +142,8 @@ void QtPCGToVSTUI::analysePCG()
     ui.radioTriton->setChecked(!bIsTritonExtreme);
     ui.radioTritonExtreme->setChecked(bIsTritonExtreme);
 
+    selectedProgramLetters.clear();
+    selectedCombiLetters.clear();
 
     auto addCheckboxes = [&](auto* pcgContainer, auto& guiCheckboxes, auto* layout)
     {
