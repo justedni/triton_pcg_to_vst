@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 
-#include "include/rapidjson/document.h"
-#include "include/rapidjson/istreamwrapper.h"
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
 
 bool doUnitTest(const PCG_Converter* converterTemplate, KorgPCG* pcg, EPatchMode type, const std::string& unitTestFolder,
 	const std::string& pcgBankLetter, int pcgProgId, const std::string& patchRefName, std::string& outLog)

@@ -11,8 +11,8 @@
 #include <format>
 #include <regex>
 
-#include "include/rapidjson/document.h"
-#include "include/rapidjson/istreamwrapper.h"
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
 
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
 std::map<std::string, int> PCG_Converter::m_mapProgram_keyToId;
@@ -26,16 +26,26 @@ const int CustomProgramBufferSize = 540;
 PCG_Converter::PCG_Converter(
 	EnumKorgModel model,
 	KorgPCG* pcg,
-	const std::string destFolder)
+	const std::string destFolder,
+	std::function<void(const std::string&)>&& func)
 	: m_model(model)
 	, m_pcg(pcg)
 	, m_destFolder(destFolder)
+	, m_logFunc(std::move(func))
 {
 	initEffectConversions();
-	retrieveTemplatesData();
-	retrieveGMData();
-	retrieveFactoryPCG();
+
+	if (!retrieveTemplatesData())
+		return;
+
+	if (!retrieveGMData())
+		return;
+
+	if (!retrieveFactoryPCG())
+		return;
+
 	retrieveProgramNamesList();
+	m_initialized = true;
 }
 
 PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destFolder)
@@ -56,26 +66,32 @@ T readBytes(std::ifstream& stream)
 	return a;
 }
 
-void PCG_Converter::retrieveTemplatesData()
+bool PCG_Converter::retrieveTemplatesData()
 {
-	auto parse = [](std::string path, auto& target)
+	auto parse = [&](std::string path, auto& target)
 	{
 		std::ifstream ifs(path);
 		if (!ifs.is_open())
 		{
-			std::cerr << "Template " << path << " not found!!\n";
-			assert(ifs.is_open());
+			auto errMsg = std::format("Critical error: Template {} not found!!\n", path.c_str());
+			error(errMsg);
+			return false;
 		}
-
-		rapidjson::IStreamWrapper refisw{ ifs };
-		target.ParseStream(refisw);
+		else
+		{
+			rapidjson::IStreamWrapper refisw{ ifs };
+			target.ParseStream(refisw);
+			return true;
+		}
 	};
 
 	rapidjson::Document templateProgDoc;
-	parse("Data\\PatchTemplate_Program.patch", templateProgDoc);
+	if (!parse("Data\\PatchTemplate_Program.patch", templateProgDoc))
+		return false;
 
 	rapidjson::Document templateCombiDoc;
-	parse("Data\\PatchTemplate_Combi.patch", templateCombiDoc);
+	if (!parse("Data\\PatchTemplate_Combi.patch", templateCombiDoc))
+		return false;
 
 	static bool initIdMaps = true;
 
@@ -96,16 +112,20 @@ void PCG_Converter::retrieveTemplatesData()
 	getAllData(templateCombiDoc, m_dictCombiParams, m_mapCombi_keyToId);
 
 	initIdMaps = false;
+	return true;
 }
 
-void PCG_Converter::retrieveGMData()
+bool PCG_Converter::retrieveGMData()
 {
 	if (!m_mappedGMInfo.empty())
-		return;
+		return true;
 
 	std::ifstream file("Data\\Factory_GM_Programs.bin", std::ios::in | std::ios::binary | std::ios::ate);
 	if (!file.is_open())
-		return;
+	{
+		error("Critical error: Factory_GM_Programs data not found!!\n");
+		return false;
+	}
 
 	std::streamsize fileSize = file.tellg();
 	file.seekg(0, std::ios::beg);
@@ -166,9 +186,11 @@ void PCG_Converter::retrieveGMData()
 
 		m_mappedGMInfo.emplace_back(bankId, programId, factoryProgram->dataOffset);
 	}
+
+	return true;
 }
 
-void PCG_Converter::retrieveFactoryPCG()
+bool PCG_Converter::retrieveFactoryPCG()
 {
 	EnumKorgModel model;
 	KorgPCG* pcg = nullptr;
@@ -180,12 +202,14 @@ void PCG_Converter::retrieveFactoryPCG()
 
 	if (!pcg)
 	{
-		std::cerr << "Input PCG file is invalid or corrupted!\n";
+		error("Critical error: Factory PCG file is invalid or corrupted!\n");
+		return false;
 	}
 	else
 	{
 		assert(model == m_pcg->model);
 		m_factoryPcg = pcg;
+		return true;
 	}
 }
 
@@ -233,8 +257,19 @@ void PCG_Converter::log(const std::string& text)
 		std::cout << text;
 }
 
+void PCG_Converter::error(const std::string& text)
+{
+	if (m_logFunc)
+		m_logFunc(text);
+	else
+		std::cerr << text;
+}
+
 void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
 {
+	if (!m_initialized)
+		return;
+
 	int currentUserBank = 0;
 
 	for (uint32_t i = 0; i < m_pcg->Program->count; i++)
@@ -267,6 +302,9 @@ void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
 
 void PCG_Converter::convertCombis(const std::vector<std::string>& letters)
 {
+	if (!m_initialized)
+		return;
+
 	int currentUserBank = 0;
 
 	for (uint32_t i = 0; i < m_pcg->Combination->count; i++)

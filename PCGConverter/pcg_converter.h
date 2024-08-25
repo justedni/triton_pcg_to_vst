@@ -49,11 +49,12 @@ public:
 	PCG_Converter(
 		EnumKorgModel model,
 		KorgPCG* pcg,
-		const std::string destFolder);
+		const std::string destFolder,
+		std::function<void(const std::string&)>&& func = {});
 
 	PCG_Converter(const PCG_Converter& other, const std::string destFolder);
 
-	void setLogFunc(std::function<void(const std::string&)>&& func) { m_logFunc = std::move(func); }
+	bool isInitialized() const { return m_initialized; }
 
 	void convertPrograms(const std::vector<std::string>& letters);
 	void convertCombis(const std::vector<std::string>& letters);
@@ -89,11 +90,12 @@ public:
 
 private:
 	void log(const std::string& text);
+	void error(const std::string& text);
 
-	void retrieveTemplatesData();
+	bool retrieveTemplatesData();
+	bool retrieveGMData();
+	bool retrieveFactoryPCG();
 	void retrieveProgramNamesList();
-	void retrieveGMData();
-	void retrieveFactoryPCG();
 
 	typedef std::map<int, ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
@@ -132,6 +134,8 @@ private:
 	const EnumKorgModel m_model;
 	KorgPCG* m_pcg = nullptr;
 	const std::string m_destFolder;
+
+	bool m_initialized = false;
 
 	ParamList m_dictProgParams;
 	ParamList m_dictCombiParams;

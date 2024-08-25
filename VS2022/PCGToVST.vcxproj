@@ -70,6 +70,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\..\Intermediates\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\..\Intermediates\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -104,7 +112,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\PCGConverter;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -121,6 +129,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>..\PCGConverter;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,45 +139,45 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="alchemist.cpp" />
-    <ClCompile Include="helpers.cpp" />
-    <ClCompile Include="pcg_converter_user.cpp" />
-    <ClCompile Include="pcg_converter_combis.cpp" />
-    <ClCompile Include="pcg_converter_effects.cpp" />
-    <ClCompile Include="pcg_converter_programs.cpp" />
-    <ClCompile Include="pcg_converter.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="pcg_convert_gm.cpp" />
-    <ClCompile Include="unit_tests.cpp" />
+    <ClCompile Include="..\PCGConverter\alchemist.cpp" />
+    <ClCompile Include="..\PCGConverter\helpers.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_user.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_combis.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_effects.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_programs.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_convert_gm.cpp" />
+    <ClCompile Include="..\PCGConverter\unit_tests.cpp" />
+    <ClCompile Include="..\ConsoleApp\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="alchemist.h" />
-    <ClInclude Include="helpers.h" />
-    <ClInclude Include="pcg_converter.h" />
-    <ClInclude Include="unit_tests.h" />
+    <ClInclude Include="..\PCGConverter\alchemist.h" />
+    <ClInclude Include="..\PCGConverter\helpers.h" />
+    <ClInclude Include="..\PCGConverter\pcg_converter.h" />
+    <ClInclude Include="..\PCGConverter\unit_tests.h" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Resources\Factory_GM_Programs.bin">
+    <CopyFileToFolders Include="..\Resources\Factory_GM_Programs.bin">
       <FileType>Document</FileType>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Resources\Factory_Triton.PCG">
+    <CopyFileToFolders Include="..\Resources\Factory_Triton.PCG">
       <FileType>Document</FileType>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Resources\Factory_TritonExtreme.PCG">
+    <CopyFileToFolders Include="..\Resources\Factory_TritonExtreme.PCG">
       <FileType>Document</FileType>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Resources\PatchTemplate_Combi.patch">
+    <CopyFileToFolders Include="..\Resources\PatchTemplate_Combi.patch">
       <FileType>Document</FileType>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="Resources\PatchTemplate_Program.patch">
+    <CopyFileToFolders Include="..\Resources\PatchTemplate_Program.patch">
       <FileType>Document</FileType>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\Data</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\Data</DestinationFolders>
