@@ -39,6 +39,11 @@ std::vector<BankDef> Helpers::bank_definitions = {
 	{ 23, 13, 0x20006, "N" }
 };
 
+bool Helpers::isGMBank(int bankId)
+{
+	return (bankId >= 6 && bankId <= 16);
+}
+
 std::string Helpers::pcgProgBankIdToLetter(int bankId)
 {
 	auto found = std::find_if(bank_definitions.begin(), bank_definitions.end(), [&bankId](auto& e) { return e.shortId == bankId; });

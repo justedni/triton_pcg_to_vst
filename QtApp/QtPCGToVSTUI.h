@@ -35,7 +35,7 @@ private:
     void updateVisibility();
     void updateCheckboxes();
 
-    EnumKorgModel model;
+    EnumKorgModel m_model;
     KorgPCG* m_pcg = nullptr;
 
     Ui::QtPCGToVSTUIClass ui;

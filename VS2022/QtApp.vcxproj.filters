@@ -28,9 +28,6 @@
     <ClCompile Include="..\PCGConverter\helpers.cpp">
       <Filter>PCGConverter</Filter>
     </ClCompile>
-    <ClCompile Include="..\PCGConverter\pcg_convert_gm.cpp">
-      <Filter>PCGConverter</Filter>
-    </ClCompile>
     <ClCompile Include="..\PCGConverter\pcg_converter.cpp">
       <Filter>PCGConverter</Filter>
     </ClCompile>
@@ -54,6 +51,9 @@
     </ClCompile>
     <ClCompile Include="..\QtApp\main.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\PCGConverter\pcg_converter_gm.cpp">
+      <Filter>PCGConverter</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

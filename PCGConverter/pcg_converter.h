@@ -95,7 +95,6 @@ private:
 	bool retrieveTemplatesData();
 	bool retrieveGMData();
 	bool retrieveFactoryPCG();
-	void retrieveProgramNamesList();
 
 	typedef std::map<int, ProgParam> ParamList;
 	void patchInnerProgram(ParamList& content, const std::string& prefix, unsigned char* data, const std::string& progName, EPatchMode mode);
@@ -131,8 +130,8 @@ private:
 
 	void convertProgramJsonToBin(PCG_Converter::ParamList& content, const std::string& programName, std::ostream& outStream);
 
-	const EnumKorgModel m_model;
 	KorgPCG* m_pcg = nullptr;
+	EnumKorgModel m_targetModel;
 	const std::string m_destFolder;
 
 	bool m_initialized = false;
@@ -165,8 +164,6 @@ private:
 
 	static std::map<std::string, int> m_mapProgram_keyToId;
 	static std::map<std::string, int> m_mapCombi_keyToId;
-
-	std::map<std::string, std::string> m_mapProgramsNames;
 
 	static std::vector<TritonStruct> shared_conversions;
 

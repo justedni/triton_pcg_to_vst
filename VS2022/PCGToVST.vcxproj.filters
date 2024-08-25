@@ -36,7 +36,7 @@
     <ClCompile Include="..\PCGConverter\pcg_converter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\PCGConverter\pcg_convert_gm.cpp">
+    <ClCompile Include="..\PCGConverter\pcg_converter_gm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\PCGConverter\unit_tests.cpp">

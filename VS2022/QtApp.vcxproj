@@ -115,9 +115,9 @@
     <ClCompile Include="..\PCGConverter\pcg_converter.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter_combis.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter_effects.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_gm.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter_programs.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter_user.cpp" />
-    <ClCompile Include="..\PCGConverter\pcg_convert_gm.cpp" />
     <ClCompile Include="..\QtApp\Worker.cpp" />
     <QtRcc Include="..\QtApp\QtPCGToVSTUI.qrc" />
     <QtUic Include="..\QtApp\QtPCGToVSTUI.ui" />

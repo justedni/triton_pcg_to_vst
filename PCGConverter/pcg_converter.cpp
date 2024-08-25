@@ -28,8 +28,8 @@ PCG_Converter::PCG_Converter(
 	KorgPCG* pcg,
 	const std::string destFolder,
 	std::function<void(const std::string&)>&& func)
-	: m_model(model)
-	, m_pcg(pcg)
+	: m_pcg(pcg)
+	, m_targetModel(model)
 	, m_destFolder(destFolder)
 	, m_logFunc(std::move(func))
 {
@@ -44,18 +44,16 @@ PCG_Converter::PCG_Converter(
 	if (!retrieveFactoryPCG())
 		return;
 
-	retrieveProgramNamesList();
 	m_initialized = true;
 }
 
 PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destFolder)
-	: m_model(other.m_model)
-	, m_pcg(other.m_pcg)
+	: m_pcg(other.m_pcg)
+	, m_targetModel(other.m_targetModel)
 	, m_destFolder(destFolder)
 {
 	m_dictProgParams = other.m_dictProgParams;
 	m_dictCombiParams = other.m_dictCombiParams;
-	m_mapProgramsNames = other.m_mapProgramsNames;
 }
 
 template<typename T>
@@ -195,7 +193,7 @@ bool PCG_Converter::retrieveFactoryPCG()
 	EnumKorgModel model;
 	KorgPCG* pcg = nullptr;
 
-	if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
+	if (m_pcg->model == EnumKorgModel::KORG_TRITON_EXTREME)
 		pcg = LoadTritonPCG("Data\\Factory_TritonExtreme.PCG", model);
 	else
 		pcg = LoadTritonPCG("Data\\Factory_Triton.PCG", model);
@@ -213,36 +211,22 @@ bool PCG_Converter::retrieveFactoryPCG()
 	}
 }
 
-void PCG_Converter::retrieveProgramNamesList()
-{
-	m_mapProgramsNames.clear();
-
-	for (uint32_t i = 0; i < m_pcg->Program->count; i++)
-	{
-		auto* prog = m_pcg->Program->bank[i];
-		for (uint32_t j = 0; j < prog->count; j++)
-		{
-			auto* item = prog->item[j];
-			auto name = std::string((char*)item->data, 16);
-			auto uniqueId = Helpers::getUniqueId(Helpers::bankIdToLetter(prog->bank), j);
-			m_mapProgramsNames[uniqueId] = name;
-		}
-	}
-}
-
 KorgBank* PCG_Converter::findDependencyBank(KorgPCG* pcg, int depBank)
 {
 	auto depBankLetter = Helpers::pcgProgBankIdToLetter(depBank);
 	KorgBank* foundBank = nullptr;
 
-	for (uint32_t i = 0; i < pcg->Program->count; i++)
+	if (pcg->Program)
 	{
-		auto* prog = pcg->Program->bank[i];
-		auto bankLetter = Helpers::bankIdToLetter(prog->bank);
-		if (bankLetter == depBankLetter)
+		for (uint32_t i = 0; i < pcg->Program->count; i++)
 		{
-			foundBank = prog;
-			break;
+			auto* prog = pcg->Program->bank[i];
+			auto bankLetter = Helpers::bankIdToLetter(prog->bank);
+			if (bankLetter == depBankLetter)
+			{
+				foundBank = prog;
+				break;
+			}
 		}
 	}
 
@@ -576,14 +560,14 @@ void PCG_Converter::patchProgramToStream(int bankId, int presetId, const std::st
 {
 	const auto mode = EPatchMode::Program;
 	auto& content = m_dictProgParams;
-	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_model);
+	auto bankNumber = Helpers::getVSTBankNumber(mode, targetLetter, m_targetModel);
 
 	patchInnerProgram(content, "prog_", data, presetName, mode);
 	patchArpeggiator(content, "prog_user_arp_", "prog_arpeggiator_pattern_no.", data, mode);
 	patchDrumKit(content, "prog_", data, mode);
 	patchProgramUnusedValues(mode, content, "prog_");
 
-	jsonWriteHeaderBegin(out_stream, presetName, mode, m_pcg->model, content);
+	jsonWriteHeaderBegin(out_stream, presetName, mode, m_targetModel, content);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Program");
 	jsonWriteDSPSettings(out_stream, content);
 	jsonWriteEnd(out_stream, "program");
@@ -625,7 +609,7 @@ void PCG_Converter::patchEffect(EPatchMode mode, PCG_Converter::ParamList& conte
 	}
 	else
 	{
-		auto msg = std::format(" Unhandled effect {} \n", effectId);
+		auto msg = std::format("  Unhandled effect {} \n", effectId);
 		log(msg);
 	}
 }
@@ -872,8 +856,8 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 			static bool bWarnAboutArppegios = true;
 			if (bWarnAboutArppegios)
 			{
-				log("\tImportant: no user arpeggiator patterns are stored in this PCG -> defaulting to factory PCG\n");
-				log("\tThis message is only printed once.\n");
+				log("  Important: no user arpeggiator patterns are stored in this PCG -> defaulting to factory PCG\n");
+				log("  This message is only printed once.\n");
 				bWarnAboutArppegios = false;
 			}
 			arpBanks = m_factoryPcg->Arpeggio;
@@ -902,7 +886,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 
 		if (!foundBank)
 		{
-			log(std::format(" Couldn't find arp. pattern {} in PCG\n", foundRef->value));
+			log(std::format("  Couldn't find arp. pattern {} in PCG\n", foundRef->value));
 		}
 		else
 		{
@@ -953,15 +937,15 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 		static bool bWarnAboutDrumkits = true;
 		if (bWarnAboutDrumkits)
 		{
-			log("\tImportant: no user Drum Kits are stored in this PCG -> defaulting to factory PCG\n");
-			log("\tThis message is only printed once.\n");
+			log("  Important: no user Drum Kits are stored in this PCG -> defaulting to factory PCG\n");
+			log("  This message is only printed once.\n");
 			bWarnAboutDrumkits = false;
 		}
 		drumkitBanks = m_factoryPcg->Drumkit;
 
 		if (!drumkitBanks)
 		{
-			log("\tFactory PCG doesn't contain user Drum Kits!");
+			log("  Factory PCG doesn't contain user Drum Kits!");
 			return;
 		}
 	}
@@ -983,7 +967,7 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 	if (!foundBank)
 	{
-		log(std::format(" Couldn't find user Drum kit {}\n", drumKitNo));
+		log(std::format("  Couldn't find user Drum kit {}\n", drumKitNo));
 	}
 	else
 	{
@@ -1032,7 +1016,7 @@ void PCG_Converter::patchInnerProgram(PCG_Converter::ParamList& content, const s
 	{
 		patchSharedConversions(mode, content, prefix, data);
 
-		if (m_model == EnumKorgModel::KORG_TRITON_EXTREME)
+		if (m_pcg->model == EnumKorgModel::KORG_TRITON_EXTREME)
 		{
 			for (auto& conversion : triton_extreme_conversions)
 			{
@@ -1176,25 +1160,36 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 	for (auto& prog : associatedPrograms)
 	{
 		std::string programName = "Unknown";
-		auto letter = Helpers::pcgProgBankIdToLetter(prog.bank);
-		auto uniqueId = Helpers::getUniqueId(letter, prog.program);
-		if (m_mapProgramsNames.find(uniqueId) != m_mapProgramsNames.end())
-		{
-			programName = m_mapProgramsNames[uniqueId];
-		}
-
 		auto prefix = utils::string_format("combi_timbre_%d_", iTimber + 1);
 
 		auto processed = false;
 		auto* progBank = findDependencyBank(m_pcg, prog.bank);
+		if (!progBank)
+		{
+			static bool bWarnAboutFactoryBanks = true;
+			if (bWarnAboutFactoryBanks)
+			{
+				if (!m_pcg->Program)
+					log("  Important: this PCG doesn't contain any Programs -> defaulting to factory PCG\n");
+				else
+					log(std::format("  Important: the program dependency (timber {}: {}:{}) couldn't be found on this PCG -> defaulting to factory PCG\n",
+						iTimber, prog.bank, prog.program));
+				log("  This message is only printed once.\n");
+				bWarnAboutFactoryBanks = false;
+			}
+
+			progBank = findDependencyBank(m_factoryPcg, prog.bank);
+		}
+
 		if (progBank)
 		{
 			auto* progItem = progBank->item[prog.program];
 			auto depProgName = std::string((char*)progItem->data, 16);
 			patchInnerProgram(content, prefix, progItem->data, depProgName, EPatchMode::Combi);
+			programName = depProgName;
 			processed = true;
 		}
-		else
+		else if (Helpers::isGMBank(prog.bank))
 		{
 			// GM Banks are not saved in the PCG, we need to retrieve it ourselves
 			auto found = std::find_if(m_mappedGMInfo.begin(), m_mappedGMInfo.end(), [&](auto& e) { return prog.bank == e.bankId && prog.program == e.programId; });
@@ -1212,20 +1207,23 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 				programName = depProgName;
 				processed = true;
 			}
-			else
-			{
-				log(std::format(" Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
-			}
 		}
 
-		if (processed)
+		if (!processed)
+		{
+			if (Helpers::isGMBank(prog.bank))
+				log(std::format("  Couldn't locate GM program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
+			else
+				log(std::format("  Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
+		}
+		else
 		{
 			patchDrumKit(content, prefix, data, mode);
 			patchProgramUnusedValues(mode, content, prefix);
 			patchCombiUnusedValues(content, prefix);
 		}
 
-		auto timberBankName = Helpers::getVSTProgramBankName(prog.bank, m_model);
+		auto timberBankName = Helpers::getVSTProgramBankName(prog.bank, m_targetModel);
 		timbersToWrite.emplace_back(timberBankName, prog.program, programName);
 
 		iTimber++;
@@ -1242,9 +1240,9 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 
 	postPatchCombi(content);
 
-	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_model);
+	auto bankNumber = Helpers::getVSTBankNumber(EPatchMode::Combi, targetLetter, m_targetModel);
 
-	jsonWriteHeaderBegin(out_stream, presetName, EPatchMode::Combi, m_pcg->model, content);
+	jsonWriteHeaderBegin(out_stream, presetName, EPatchMode::Combi, m_targetModel, content);
 	jsonWriteTimbers(out_stream, timbersToWrite);
 	jsonWriteHeaderEnd(out_stream, presetId, bankNumber, targetLetter, "Combi");
 	jsonWriteDSPSettings(out_stream, content);

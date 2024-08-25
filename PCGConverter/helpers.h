@@ -36,6 +36,7 @@ class Helpers
 public:
 	static std::string bankIdToLetter(int bankId);
 	static std::string pcgProgBankIdToLetter(int bankId);
+	static bool isGMBank(int bankId);
 	static int bankPcgIdToId(int bankId);
 
 	static int getVSTBankNumber(EPatchMode type, const std::string& letter, EnumKorgModel model);

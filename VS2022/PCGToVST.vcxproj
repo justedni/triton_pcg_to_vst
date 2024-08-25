@@ -146,7 +146,7 @@
     <ClCompile Include="..\PCGConverter\pcg_converter_effects.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter_programs.cpp" />
     <ClCompile Include="..\PCGConverter\pcg_converter.cpp" />
-    <ClCompile Include="..\PCGConverter\pcg_convert_gm.cpp" />
+    <ClCompile Include="..\PCGConverter\pcg_converter_gm.cpp" />
     <ClCompile Include="..\PCGConverter\unit_tests.cpp" />
     <ClCompile Include="..\ConsoleApp\main.cpp" />
   </ItemGroup>

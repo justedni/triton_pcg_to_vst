@@ -134,7 +134,14 @@ void QtPCGToVSTUI::on_browsePCG_clicked()
 void QtPCGToVSTUI::analysePCG()
 {
     auto pcgPath = ui.linePCGPath->text();
+    EnumKorgModel model;
     m_pcg = LoadTritonPCG(pcgPath.toStdString().c_str(), model);
+    m_model = model;
+
+    bool bIsTritonExtreme = (m_model == EnumKorgModel::KORG_TRITON_EXTREME);
+    ui.radioTriton->setChecked(!bIsTritonExtreme);
+    ui.radioTritonExtreme->setChecked(bIsTritonExtreme);
+
 
     auto addCheckboxes = [&](auto* pcgContainer, auto& guiCheckboxes, auto* layout)
     {
@@ -155,6 +162,14 @@ void QtPCGToVSTUI::analysePCG()
                 connect(checkbox, &QCheckBox::checkStateChanged, this, [this, checkbox](auto state) { on_checkBoxStateChanged(state, checkbox); });
                 guiCheckboxes.push_back(checkbox);
                 layout->addWidget(checkbox);
+            }
+        }
+
+        if (guiCheckboxes.size() <= 4)
+        {
+            for (auto* checkbox : guiCheckboxes)
+            {
+                checkbox->setChecked(true);
             }
         }
     };
@@ -203,13 +218,15 @@ void QtPCGToVSTUI::on_generateButton_clicked()
             return;
     }
 
+    auto targetModel = ui.radioTritonExtreme->isChecked() ? EnumKorgModel::KORG_TRITON_EXTREME : EnumKorgModel::KORG_TRITON;
+
     QThread* thread = new QThread();
-    Worker* worker = new Worker(model, m_pcg, outPath.toStdString(), selectedProgramLetters, selectedCombiLetters);
+    Worker* worker = new Worker(targetModel, m_pcg, outPath.toStdString(), selectedProgramLetters, selectedCombiLetters);
     worker->moveToThread(thread);
     connect(worker, SIGNAL(log(const std::string&)), this, SLOT(logCallback(const std::string&)));
     connect(thread, SIGNAL(started()), worker, SLOT(process()));
-    connect(worker, SIGNAL(finished()), thread, SLOT(quit()));
-    connect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
+    connect(worker, &Worker::finished, thread, [thread](bool) { thread->quit(); });
+    connect(worker, &Worker::finished, thread, [worker](bool state){ worker->deleteLater(); });
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     connect(worker, SIGNAL(finished(bool)), this, SLOT(workerFinished(bool)));
     thread->start();
