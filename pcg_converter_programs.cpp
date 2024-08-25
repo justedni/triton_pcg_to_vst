@@ -127,7 +127,7 @@ int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, uns
 	if (pcgBank == 1)
 	{
 		auto msg = std::format("\tUnhandled Bank (RAM) ({})\n", paramName.c_str());
-		std::cout << msg;
+		log(msg);
 		return pcgBank;
 	}
 	else

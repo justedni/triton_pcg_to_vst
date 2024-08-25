@@ -225,6 +225,14 @@ KorgBank* PCG_Converter::findDependencyBank(KorgPCG* pcg, int depBank)
 	return foundBank;
 }
 
+void PCG_Converter::log(const std::string& text)
+{
+	if (m_logFunc)
+		m_logFunc(text);
+	else
+		std::cout << text;
+}
+
 void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
 {
 	int currentUserBank = 0;
@@ -246,9 +254,9 @@ void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
 			auto name = std::string((char*)item->data, 16);
 
 			std::stringstream msgStrm;
-			msgStrm << Helpers::bankIdToLetter(prog->bank) << ":" << std::setw(3) << std::setfill('0') << j;
-			msgStrm << " Patching " << name << "\n";
-			std::cout << msgStrm.str();
+			msgStrm << "Program " << Helpers::bankIdToLetter(prog->bank) << ":" << std::setw(3) << std::setfill('0') << j;
+			msgStrm << " " << name << "\n";
+			log(msgStrm.str());
 
 			patchProgramToJson(prog->bank, j, name, item->data, userFolder, targetLetter);
 		}
@@ -277,8 +285,10 @@ void PCG_Converter::convertCombis(const std::vector<std::string>& letters)
 			auto* item = bank->item[jPreset];
 			auto name = std::string((char*)item->data, 16);
 
-			auto msg = utils::string_format("Combi %s::%d Patching %s\n", Helpers::bankIdToLetter(bank->bank).c_str(), jPreset, name.c_str());
-			std::cout << msg;
+			std::stringstream msgStrm;
+			msgStrm << "Combi " << Helpers::bankIdToLetter(bank->bank) << ":" << std::setw(3) << std::setfill('0') << jPreset;
+			msgStrm << " " << name << "\n";
+			log(msgStrm.str());
 
 			patchCombiToJson(bank->bank, jPreset, name, item->data, userFolder, targetLetter);
 		}
@@ -578,7 +588,7 @@ void PCG_Converter::patchEffect(EPatchMode mode, PCG_Converter::ParamList& conte
 	else
 	{
 		auto msg = std::format(" Unhandled effect {} \n", effectId);
-		std::cout << msg;
+		log(msg);
 	}
 }
 
@@ -824,8 +834,8 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 			static bool bWarnAboutArppegios = true;
 			if (bWarnAboutArppegios)
 			{
-				std::cout << "\tImportant: no user arpeggiator patterns are stored in this PCG -> defaulting to factory PCG\n";
-				std::cout << "\tThis message is only printed once.\n";
+				log("\tImportant: no user arpeggiator patterns are stored in this PCG -> defaulting to factory PCG\n");
+				log("\tThis message is only printed once.\n");
 				bWarnAboutArppegios = false;
 			}
 			arpBanks = m_factoryPcg->Arpeggio;
@@ -854,7 +864,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 
 		if (!foundBank)
 		{
-			std::cout << std::format(" Couldn't find arp. pattern {} in PCG\n", foundRef->value);
+			log(std::format(" Couldn't find arp. pattern {} in PCG\n", foundRef->value));
 		}
 		else
 		{
@@ -905,15 +915,15 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 		static bool bWarnAboutDrumkits = true;
 		if (bWarnAboutDrumkits)
 		{
-			std::cout << "\tImportant: no user Drum Kits are stored in this PCG -> defaulting to factory PCG\n";
-			std::cout << "\tThis message is only printed once.\n";
+			log("\tImportant: no user Drum Kits are stored in this PCG -> defaulting to factory PCG\n");
+			log("\tThis message is only printed once.\n");
 			bWarnAboutDrumkits = false;
 		}
 		drumkitBanks = m_factoryPcg->Drumkit;
 
 		if (!drumkitBanks)
 		{
-			std::cerr << "\tFactory PCG doesn't contain user Drum Kits!";
+			log("\tFactory PCG doesn't contain user Drum Kits!");
 			return;
 		}
 	}
@@ -935,7 +945,7 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 	if (!foundBank)
 	{
-		std::cout << std::format(" Couldn't find user Drum kit {}\n", drumKitNo);
+		log(std::format(" Couldn't find user Drum kit {}\n", drumKitNo));
 	}
 	else
 	{
@@ -1166,7 +1176,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 			}
 			else
 			{
-				std::cout << std::format(" Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program);
+				log(std::format(" Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
 			}
 		}
 

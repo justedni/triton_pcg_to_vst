@@ -53,6 +53,8 @@ public:
 
 	PCG_Converter(const PCG_Converter& other, const std::string destFolder);
 
+	void setLogFunc(std::function<void(const std::string&)>&& func) { m_logFunc = std::move(func); }
+
 	void convertPrograms(const std::vector<std::string>& letters);
 	void convertCombis(const std::vector<std::string>& letters);
 
@@ -86,6 +88,8 @@ public:
 	void utils_convertGMProgramsToBin(const std::string& sourceFolder, const std::string& outFile);
 
 private:
+	void log(const std::string& text);
+
 	void retrieveTemplatesData();
 	void retrieveProgramNamesList();
 	void retrieveGMData();
@@ -134,6 +138,8 @@ private:
 
 	KorgPCG* m_factoryPcg = nullptr;
 
+	std::function<void(const std::string&)> m_logFunc;
+
 	static std::vector<char> m_gmData;
 
 	struct GMInfo
@@ -160,7 +166,7 @@ private:
 
 	static std::vector<TritonStruct> shared_conversions;
 
-	static int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data);
+	int convertOSCBank(int pcgBank, const std::string& paramName, unsigned char* data);
 
 	static std::vector<TritonStruct> program_conversions;
 	static std::vector<TritonStruct> triton_extreme_conversions;
