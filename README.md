@@ -2,10 +2,9 @@
 
 The tool is finished! Thanks everyone for your patience! (please check the "Releases" section to download Windows executables)
 
-This is a command line tool to convert PCG files saved from any physical Triton keyboard/module, into the .patch (json) format used by the Triton and Triton Extreme VST plugins.
+This is a tool to convert PCG files saved from any physical Triton keyboard/module, into the .patch (json) format used by the Triton and Triton Extreme VST plugins. It comes in two versions: with GUI and command line.
 
 ## Documentation
-The tool is available in two versions: with GUI and command line.
 ### GUI
 <img src="UI_Screenshot.png" data-canonical-src="UI_Screenshot.png" width="600" height="248" />
 
