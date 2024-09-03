@@ -249,73 +249,97 @@ void PCG_Converter::error(const std::string& text)
 		std::cerr << text;
 }
 
-void PCG_Converter::convertPrograms(const std::vector<std::string>& letters)
+void PCG_Converter::convertPrograms(const std::vector<std::string>& letters, const std::vector<int>& targetLetterIds)
 {
 	if (!m_initialized)
 		return;
 
-	int currentUserBank = 0;
+	assert(letters.size() == targetLetterIds.size());
 
-	for (uint32_t i = 0; i < m_pcg->Program->count; i++)
+	for (int iLetter = 0; iLetter < letters.size(); iLetter++)
 	{
-		auto* prog = m_pcg->Program->bank[i];
-		auto bankLetter = Helpers::bankIdToLetter(prog->bank);
+		KorgBank* foundBank = nullptr;
 
-		if (std::find(letters.begin(), letters.end(), bankLetter) == letters.end())
+		for (uint32_t i = 0; i < m_pcg->Program->count; i++)
+		{
+			auto* bank = m_pcg->Program->bank[i];
+			auto bankLetter = Helpers::bankIdToLetter(bank->bank);
+
+			if (bankLetter == letters[iLetter])
+			{
+				foundBank = bank;
+				break;
+			}
+		}
+
+		assert(foundBank);
+		if (!foundBank)
 			continue;
 
-		auto targetLetter = vst_bank_letters[currentUserBank];
+		int targetLetterId = targetLetterIds[iLetter];
+		assert(targetLetterId >= 0 && targetLetterId < vst_bank_letters.size());
+		auto targetLetter = vst_bank_letters[targetLetterId];
 		auto userFolder = Helpers::createSubfolders(m_destFolder, "Program", targetLetter);
 
-		for (uint32_t j = 0; j < prog->count; j++)
+		for (uint32_t j = 0; j < foundBank->count; j++)
 		{
-			auto* item = prog->item[j];
+			auto* item = foundBank->item[j];
 			auto name = std::string((char*)item->data, 16);
 
 			std::stringstream msgStrm;
-			msgStrm << "Program " << Helpers::bankIdToLetter(prog->bank) << ":" << std::setw(3) << std::setfill('0') << j;
+			msgStrm << "Program " << Helpers::bankIdToLetter(foundBank->bank) << ":" << std::setw(3) << std::setfill('0') << j;
 			msgStrm << " " << name << "\n";
 			log(msgStrm.str());
 
-			patchProgramToJson(prog->bank, j, name, item->data, userFolder, targetLetter);
+			patchProgramToJson(foundBank->bank, j, name, item->data, userFolder, targetLetter);
 		}
-
-		currentUserBank++;
 	}
 }
 
-void PCG_Converter::convertCombis(const std::vector<std::string>& letters)
+void PCG_Converter::convertCombis(const std::vector<std::string>& letters, const std::vector<int>& targetLetterIds)
 {
 	if (!m_initialized)
 		return;
 
-	int currentUserBank = 0;
+	assert(letters.size() == targetLetterIds.size());
 
-	for (uint32_t i = 0; i < m_pcg->Combination->count; i++)
+	for (int iLetter = 0; iLetter < letters.size(); iLetter++)
 	{
-		auto* bank = m_pcg->Combination->bank[i];
-		auto bankLetter = Helpers::bankIdToLetter(bank->bank);
+		KorgBank* foundBank = nullptr;
 
-		if (std::find(letters.begin(), letters.end(), bankLetter) == letters.end())
+		for (uint32_t i = 0; i < m_pcg->Combination->count; i++)
+		{
+			auto* bank = m_pcg->Combination->bank[i];
+			auto bankLetter = Helpers::bankIdToLetter(bank->bank);
+
+			if (bankLetter == letters[iLetter])
+			{
+				foundBank = bank;
+				break;
+			}
+		}
+
+		assert(foundBank);
+		if (!foundBank)
 			continue;
 
-		auto targetLetter = vst_bank_letters[currentUserBank];
+		int targetLetterId = targetLetterIds[iLetter];
+		assert(targetLetterId >= 0 && targetLetterId < vst_bank_letters.size());
+		auto targetLetter = vst_bank_letters[targetLetterId];
 		auto userFolder = Helpers::createSubfolders(m_destFolder, "Combi", targetLetter);
 
-		for (uint32_t jPreset = 0; jPreset < bank->count; jPreset++)
+		for (uint32_t jPreset = 0; jPreset < foundBank->count; jPreset++)
 		{
-			auto* item = bank->item[jPreset];
+			auto* item = foundBank->item[jPreset];
 			auto name = std::string((char*)item->data, 16);
 
 			std::stringstream msgStrm;
-			msgStrm << "Combi " << Helpers::bankIdToLetter(bank->bank) << ":" << std::setw(3) << std::setfill('0') << jPreset;
+			msgStrm << "Combi " << Helpers::bankIdToLetter(foundBank->bank) << ":" << std::setw(3) << std::setfill('0') << jPreset;
 			msgStrm << " " << name << "\n";
 			log(msgStrm.str());
 
-			patchCombiToJson(bank->bank, jPreset, name, item->data, userFolder, targetLetter);
+			patchCombiToJson(foundBank->bank, jPreset, name, item->data, userFolder, targetLetter);
 		}
-
-		currentUserBank++;
 	}
 }
 

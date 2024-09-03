@@ -1,8 +1,10 @@
 #include "QtPCGToVSTUI.h"
 
 #include <QLabel>
+#include <QSizePolicy>
 #include <QFileDialog>
 #include <QCheckbox>
+#include <QComboBox>
 #include <QFuture>
 #include <QDir>
 #include <QDirIterator>
@@ -15,6 +17,22 @@
 #include "pcg_converter.h"
 #include "helpers.h"
 
+void BankSelection::cleanup(QHBoxLayout* layout)
+{
+    auto remove = [&](auto*& widget)
+    {
+        if (widget)
+        {
+            layout->removeWidget(widget);
+            delete widget;
+            widget = nullptr;
+        }
+    };
+
+    remove(targetCombo);
+    remove(label);
+}
+
 QtPCGToVSTUI::QtPCGToVSTUI(QWidget* parent)
     : QMainWindow(parent)
 {
@@ -26,63 +44,125 @@ QtPCGToVSTUI::QtPCGToVSTUI(QWidget* parent)
 
     analysePCG();
     updateVisibility();
+
+    programBankSelection.reserve(4);
+    combiBankSelection.reserve(4);
 }
 
 QtPCGToVSTUI::~QtPCGToVSTUI()
-{}
+{
+    for (auto& s : programBankSelection)
+    {
+        s.cleanup(ui.hLayout_targetPrograms);
+    }
+
+    for (auto& s : combiBankSelection)
+    {
+        s.cleanup(ui.hLayout_targetCombis);
+    }
+}
 
 void QtPCGToVSTUI::on_checkBoxStateChanged(Qt::CheckState state, QCheckBox* checkbox)
 {
     const auto letter = checkbox->text().toStdString();
     auto it = std::find(programCheckboxes.begin(), programCheckboxes.end(), checkbox);
 
-    auto handleLetter = [&](auto& letterVec, auto& checkBoxVec)
+    auto handleLetter = [&](auto& selectionCont, auto& checkBoxVec, auto* uiLayout)
     {
         if (state == Qt::CheckState::Checked)
         {
-            letterVec.push_back(letter);
+            auto* label = new QLabel(checkbox->text() + ":");
+
+            QComboBox* combo = new QComboBox(this);
+            char targetLetter = 'A';
+            for (int i = 0; i < 4; i++)
+            {
+                combo->addItem(QString::asprintf("USER-%c", targetLetter));
+                targetLetter++;
+            }
+
+            combo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+            combo->setMaximumSize(65, 22);
+
+            int targetBankIdx;
+            std::vector<int> allIds = { 0, 1, 2, 3 };
+            for (auto& s : selectionCont)
+            {
+                auto it = std::find(allIds.begin(), allIds.end(), s.targetBankId);
+                if (it != allIds.end())
+                {
+                    allIds.erase(it);
+                }
+            }
+            targetBankIdx = *allIds.begin();
+            combo->setCurrentIndex(targetBankIdx);
+
+            connect(combo, &QComboBox::currentIndexChanged, this, [this, combo](auto index) { on_targetComboboxChanged(index, combo); });
+
+            auto widgetCount = uiLayout->count();
+            uiLayout->insertWidget(widgetCount - 1, combo);
+            uiLayout->insertWidget(widgetCount - 1, label);
+            selectionCont.emplace_back(letter, combo, label, targetBankIdx);
         }
         else
         {
-            auto letterIt = std::find(letterVec.begin(), letterVec.end(), letter);
-            Q_ASSERT(letterIt != letterVec.end());
-            letterVec.erase(letterIt);
+            auto letterIt = std::find_if(selectionCont.begin(), selectionCont.end(), [letter](auto& s) { return s.srcBank == letter; });
+            Q_ASSERT(letterIt != selectionCont.end());
+            letterIt->cleanup(uiLayout);
+            selectionCont.erase(letterIt);
         }
     };
 
     if (it != programCheckboxes.end())
     {
-        handleLetter(selectedProgramLetters, programCheckboxes);
+        handleLetter(programBankSelection, programCheckboxes, ui.hLayout_targetPrograms);
     }
     else
     {
         it = std::find(combiCheckboxes.begin(), combiCheckboxes.end(), checkbox);
         if (it != combiCheckboxes.end())
         {
-            handleLetter(selectedCombiLetters, combiCheckboxes);
+            handleLetter(combiBankSelection, combiCheckboxes, ui.hLayout_targetCombis);
         }
     }
 
-    auto refreshLabel = [](auto&& prefix, auto& letterVec, auto& uiLabel)
-    {
-        auto text = QString(std::move(prefix));
+    updateCheckboxes();
+}
 
-        auto first = true;
-        char targetLetter = 'A';
-        for (auto& let : letterVec)
+void QtPCGToVSTUI::on_targetComboboxChanged(int index, QComboBox* combo)
+{
+    auto swapIndexes = [index, combo](auto& cont, auto& previousIndex)
+    {
+        for (auto& s : cont)
         {
-            if (!first) text += "; ";
-            text += QString::asprintf("%s-> USER-%c", let.c_str(), targetLetter);
-            first = false;
-            targetLetter++;
+            if (combo != s.targetCombo && s.targetCombo->currentIndex() == index)
+            {
+                s.targetCombo->blockSignals(true);
+                s.targetCombo->setCurrentIndex(previousIndex);
+                s.targetBankId = previousIndex;
+                s.targetCombo->blockSignals(false);
+                break;
+            }
         }
-        uiLabel->setText(text);
     };
 
-    refreshLabel("Programs: ", selectedProgramLetters, ui.labelProgramSelection);
-    refreshLabel("Combis: ", selectedCombiLetters, ui.labelCombiSelection);
-
-    updateCheckboxes();
+    auto it = std::find_if(programBankSelection.begin(), programBankSelection.end(), [combo](auto& s) { return s.targetCombo == combo; });
+    if (it != programBankSelection.end())
+    {
+        auto previousIndex = it->targetBankId;
+        swapIndexes(programBankSelection, previousIndex);
+        it->targetBankId = index;
+    }
+    else
+    {
+        auto it = std::find_if(combiBankSelection.begin(), combiBankSelection.end(), [combo](auto& s) { return s.targetCombo == combo; });
+        if (it != combiBankSelection.end())
+        {
+            auto previousIndex = it->targetBankId;
+            swapIndexes(combiBankSelection, previousIndex);
+            it->targetBankId = index;
+        }
+    }
 }
 
 void QtPCGToVSTUI::updateCheckboxes()
@@ -142,8 +222,8 @@ void QtPCGToVSTUI::analysePCG()
     ui.radioTriton->setChecked(!bIsTritonExtreme);
     ui.radioTritonExtreme->setChecked(bIsTritonExtreme);
 
-    selectedProgramLetters.clear();
-    selectedCombiLetters.clear();
+    programBankSelection.clear();
+    combiBankSelection.clear();
 
     auto addCheckboxes = [&](auto* pcgContainer, auto& guiCheckboxes, auto* layout)
     {
@@ -223,7 +303,7 @@ void QtPCGToVSTUI::on_generateButton_clicked()
     auto targetModel = ui.radioTritonExtreme->isChecked() ? EnumKorgModel::KORG_TRITON_EXTREME : EnumKorgModel::KORG_TRITON;
 
     QThread* thread = new QThread();
-    Worker* worker = new Worker(targetModel, m_pcg, outPath.toStdString(), selectedProgramLetters, selectedCombiLetters);
+    Worker* worker = new Worker(targetModel, m_pcg, outPath.toStdString(), programBankSelection, combiBankSelection);
     worker->moveToThread(thread);
     connect(worker, SIGNAL(log(const std::string&)), this, SLOT(logCallback(const std::string&)));
     connect(thread, SIGNAL(started()), worker, SLOT(process()));
@@ -278,6 +358,6 @@ void QtPCGToVSTUI::disableEverything(bool disable)
 void QtPCGToVSTUI::updateVisibility()
 {
     bool bEnableGenerate = (!ui.linePCGPath->text().isEmpty())
-        && (!ui.lineTargetFolder->text().isEmpty() && m_pcg && (!selectedProgramLetters.empty() || !selectedCombiLetters.empty()));
+        && (!ui.lineTargetFolder->text().isEmpty() && m_pcg && (!programBankSelection.empty() || !combiBankSelection.empty()));
     ui.generateButton->setEnabled(bEnableGenerate);
 }

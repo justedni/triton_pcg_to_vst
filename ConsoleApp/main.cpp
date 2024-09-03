@@ -129,21 +129,26 @@ int main(int argc, const char* argv[])
 		pcg,
 		destFolder);
 
-	if (!result[kProgram].empty())
+	auto process = [](auto& selected, auto&& func)
 	{
-		std::vector<std::string> letters;
-		for (auto& arg : result[kProgram])
-			letters.push_back(arg);
-		converter.convertPrograms(letters);
-	}
+		if (!selected.empty())
+		{
+			int currentUserBank = 0;
 
-	if (!result[kCombi].empty())
-	{
-		std::vector<std::string> letters;
-		for (auto& arg : result[kCombi])
-			letters.push_back(arg);
-		converter.convertCombis(letters);
-	}
+			std::vector<std::string> letters;
+			std::vector<int> targetIds;
+			for (auto& arg : selected)
+			{
+				letters.push_back(arg);
+				targetIds.push_back(currentUserBank);
+				currentUserBank++;
+			}
+			func(letters, targetIds);
+		}
+	};
+
+	process(result[kProgram], [&](const auto& letters, const auto& targets) { converter.convertPrograms(letters, targets); });
+	process(result[kCombi], [&](const auto& letters, const auto& targets) { converter.convertCombis(letters, targets); });
 
 	return 0;
 }

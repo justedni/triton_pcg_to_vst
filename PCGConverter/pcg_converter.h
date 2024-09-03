@@ -56,8 +56,8 @@ public:
 
 	bool isInitialized() const { return m_initialized; }
 
-	void convertPrograms(const std::vector<std::string>& letters);
-	void convertCombis(const std::vector<std::string>& letters);
+	void convertPrograms(const std::vector<std::string>& letters, const std::vector<int>& targetLetterIds);
+	void convertCombis(const std::vector<std::string>& letters, const std::vector<int>& targetLetterIds);
 
 	struct ProgParam
 	{

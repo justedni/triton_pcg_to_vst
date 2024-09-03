@@ -101,9 +101,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>390</x>
+      <x>440</x>
       <y>130</y>
-      <width>191</width>
+      <width>141</width>
       <height>71</height>
      </rect>
     </property>
@@ -132,24 +132,58 @@
      <rect>
       <x>10</x>
       <y>130</y>
-      <width>371</width>
+      <width>421</width>
       <height>41</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QLabel" name="labelProgramSelection">
-       <property name="text">
-        <string>Programs:</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="hLayout_targetPrograms">
+       <item>
+        <widget class="QLabel" name="labelProgramSelection">
+         <property name="text">
+          <string>Programs:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QLabel" name="labelCombiSelection">
-       <property name="text">
-        <string>Combis:</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="hLayout_targetCombis">
+       <item>
+        <widget class="QLabel" name="labelCombiSelection">
+         <property name="text">
+          <string>Combis:   </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </item>
     </layout>
    </widget>
@@ -158,7 +192,7 @@
      <rect>
       <x>10</x>
       <y>170</y>
-      <width>371</width>
+      <width>421</width>
       <height>31</height>
      </rect>
     </property>

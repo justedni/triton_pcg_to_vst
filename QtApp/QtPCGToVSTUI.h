@@ -6,9 +6,22 @@
 #include <vector>
 
 class QCheckBox;
+class QComboBox;
+class QLabel;
+
 enum class EnumKorgModel : uint8_t;
 struct KorgPCG;
 class PCG_Converter;
+
+struct BankSelection
+{
+    std::string srcBank;
+    QComboBox* targetCombo = nullptr;
+    QLabel* label = nullptr;
+    int targetBankId = 0;
+
+    void cleanup(QHBoxLayout* layout);
+};
 
 class QtPCGToVSTUI : public QMainWindow
 {
@@ -24,6 +37,7 @@ private slots:
     void on_generateButton_clicked();
 
     void on_checkBoxStateChanged(Qt::CheckState state, QCheckBox* checkbox);
+    void on_targetComboboxChanged(int index, QComboBox* combo);
 
     void logCallback(const std::string& text);
     void workerFinished(bool success);
@@ -43,6 +57,6 @@ private:
     std::vector<QCheckBox*> programCheckboxes;
     std::vector<QCheckBox*> combiCheckboxes;
 
-    std::vector<std::string> selectedProgramLetters;
-    std::vector<std::string> selectedCombiLetters;
+    std::vector<BankSelection> programBankSelection;
+    std::vector<BankSelection> combiBankSelection;
 };
