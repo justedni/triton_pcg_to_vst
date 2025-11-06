@@ -3,7 +3,7 @@
 #include <QLabel>
 #include <QSizePolicy>
 #include <QFileDialog>
-#include <QCheckbox>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QFuture>
 #include <QDir>
