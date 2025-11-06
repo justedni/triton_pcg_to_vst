@@ -256,7 +256,7 @@ KorgPCG* LoadTritonPCG(const char* file, EnumKorgModel& out_model) {
 	Chunk PCGChunk, * c1;
 	unsigned long l, buflen, l1;
 
-	auto success = fopen_s(&infile, file, "rb");
+	auto success = infile = fopen(file, "rb");
 	if (!infile) {
 		fprintf(stderr, "File not found: \"%s\".\n", file);
 		return NULL;
