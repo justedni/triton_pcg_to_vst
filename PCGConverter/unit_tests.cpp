@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
