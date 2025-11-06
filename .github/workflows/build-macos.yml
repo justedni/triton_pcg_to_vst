@@ -1,0 +1,76 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Qt6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.7.2'
+        host: 'mac'
+        target: 'desktop'
+        modules:
+        cache: true
+    
+    - name: Configure project
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
+    
+    - name: Build CLI target
+      run: |
+        cd build
+        cmake --build . --config Release --target PCGToVST_cli
+    
+    - name: Build GUI target
+      run: |
+        cd build
+        cmake --build . --config Release --target PCGToVST_gui
+    
+    - name: Package CLI application
+      run: |
+        mkdir -p deploy-cli
+        cp build/PCGToVST_cli deploy-cli/
+        if [ -d "build/Data" ]; then
+          cp -r build/Data deploy-cli/
+        fi
+        chmod +x deploy-cli/PCGToVST_cli
+    
+    - name: Package GUI application
+      run: |
+        mkdir -p deploy-gui
+
+        if [ -d "build/PCGToVST_gui.app" ]; then
+          cp -r build/PCGToVST_gui.app deploy-gui/
+        fi
+
+    - name: Upload macOS CLI artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-cli-build
+        path: deploy-cli/
+        retention-days: 90
+    
+    - name: Upload macOS GUI artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-gui-build
+        path: deploy-gui/
+        retention-days: 90
