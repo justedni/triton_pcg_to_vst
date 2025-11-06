@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <algorithm>
 
 enum class EnumKorgModel : uint8_t;
 
