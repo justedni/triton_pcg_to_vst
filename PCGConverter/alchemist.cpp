@@ -1,5 +1,7 @@
 #include "alchemist.h"
 
+#include <cstring>
+
 constexpr const int kKorgHeaderSize = 16;
 unsigned char TritonPCGHeader[kKorgHeaderSize]			= { 'K', 'O', 'R', 'G', 0x50, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
 unsigned char KarmaPCGHeader[kKorgHeaderSize]			= { 'K', 'O', 'R', 'G', 0x5D, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
