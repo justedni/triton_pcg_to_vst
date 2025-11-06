@@ -58,8 +58,6 @@ struct KorgPCG {
 	KorgBlock* CSM1, * DIV1, * Global;
 };
 
-unsigned char TritonExtremePCGHeader[];
-
 const Quad QUAD_NONE = { { ' ', ' ', ' ', ' ' } };
 const Quad QUAD_PCG1 = { { 'P', 'C', 'G', '1' } };
 const Quad QUAD_PRG1 = { { 'P', 'R', 'G', '1' } };
