@@ -1284,7 +1284,8 @@ void PCG_Converter::convertProgramJsonToBin(PCG_Converter::ParamList& content, c
 	memset(buffer + 16, 0, bufferSize - 16);
 
 	assert(programName.length() <= 16);
-	memcpy_s(buffer, 16, programName.c_str(), programName.length());
+	if (programName.length() <= 16)
+		memcpy(buffer, programName.c_str(), 16);
 
 	auto swapTwoBytes = [](short value)
 	{
