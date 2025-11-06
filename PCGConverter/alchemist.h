@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <stdio.H>
 
 typedef char str16[16];
 typedef struct { char data[4]; } Quad;
