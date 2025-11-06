@@ -2,4 +2,5 @@ UnitTest/Triton
 UnitTest/TritonExtreme
 VS2022/.vs/
 bin/
+build/
 Intermediates/
