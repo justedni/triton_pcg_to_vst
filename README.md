@@ -1,5 +1,9 @@
 # Triton/Triton Extreme PCG to VST patch
 
+![Windows](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-windows.yml/badge.svg)
+![macOS](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-macos.yml/badge.svg)
+![Linux](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-linux.yml/badge.svg)
+
 The tool is finished! Thanks everyone for your patience! (please check the "Releases" section to download Windows executables)
 
 This is a tool to convert PCG files saved from any physical Triton keyboard/module, into the .patch (json) format used by the Triton and Triton Extreme VST plugins. It comes in two versions: with GUI and command line.
