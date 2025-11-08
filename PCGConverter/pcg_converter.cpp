@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <iomanip>
 #include <array>
-#include <format>
 #include <regex>
 
 #include "rapidjson/document.h"
@@ -71,7 +70,7 @@ bool PCG_Converter::retrieveTemplatesData()
 		std::ifstream ifs(path);
 		if (!ifs.is_open())
 		{
-			auto errMsg = std::format("Critical error: Template {} not found!!\n", path.c_str());
+			auto errMsg = "Critical error: Template" + path + "not found!!\n";
 			error(errMsg);
 			return false;
 		}
@@ -633,7 +632,7 @@ void PCG_Converter::patchEffect(EPatchMode mode, PCG_Converter::ParamList& conte
 	}
 	else
 	{
-		auto msg = std::format("  Unhandled effect {} \n", effectId);
+		auto msg = "  Unhandled effect" + std::to_string(effectId) + "\n";
 		log(msg);
 	}
 }
@@ -910,7 +909,7 @@ void PCG_Converter::patchArpeggiator(PCG_Converter::ParamList& content, const st
 
 		if (!foundBank)
 		{
-			log(std::format("  Couldn't find arp. pattern {} in PCG\n", foundRef->value));
+			log("  Couldn't find arp. pattern " + std::to_string(foundRef->value) + "in PCG\n");
 		}
 		else
 		{
@@ -991,7 +990,7 @@ void PCG_Converter::patchDrumKit(PCG_Converter::ParamList& content, const std::s
 
 	if (!foundBank)
 	{
-		log(std::format("  Couldn't find user Drum kit {}\n", drumKitNo));
+		log("  Couldn't find user Drum kit " + std::to_string(drumKitNo) + "\n");
 	}
 	else
 	{
@@ -1195,9 +1194,11 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 			{
 				if (!m_pcg->Program)
 					log("  Important: this PCG doesn't contain any Programs -> defaulting to factory PCG\n");
-				else
-					log(std::format("  Important: the program dependency (timber {}: {}:{}) couldn't be found on this PCG -> defaulting to factory PCG\n",
-						iTimber, prog.bank, prog.program));
+				else {
+					auto msg = "  Important: the program dependency (timber " + std::to_string(iTimber) + ": "
+						+ std::to_string(prog.bank) + ":" + std::to_string(prog.program) + ") couldn't be found on this PCG -> defaulting to factory PCG\n";
+					log(msg);
+				}
 				log("  This message is only printed once.\n");
 				bWarnAboutFactoryBanks = false;
 			}
@@ -1236,9 +1237,9 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 		if (!processed)
 		{
 			if (Helpers::isGMBank(prog.bank))
-				log(std::format("  Couldn't locate GM program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
+				log("  Couldn't locate GM program for timber " + std::to_string(iTimber) + ": " + std::to_string(prog.bank) + ":" + std::to_string(prog.program) + "\n");
 			else
-				log(std::format("  Unknown bank/program for timber {}: {}:{}\n", iTimber, prog.bank, prog.program));
+				log("  Unknown bank/program for timber " + std::to_string(iTimber) + ": " + std::to_string(prog.bank) + ":" + std::to_string(prog.program) + "\n");
 		}
 		else
 		{

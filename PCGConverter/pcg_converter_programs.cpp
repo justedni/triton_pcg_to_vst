@@ -1,6 +1,5 @@
 #include "pcg_converter.h"
 #include <iostream>
-#include <format>
 
 std::vector<TritonStruct> PCG_Converter::triton_extreme_conversions = {
 	{ "Valve Force On/Off"					, "valveforce_onoff", 34, 0, 0 },
@@ -126,7 +125,7 @@ int PCG_Converter::convertOSCBank(int pcgBank, const std::string& paramName, uns
 
 	if (pcgBank == 1)
 	{
-		auto msg = std::format("\tUnhandled Bank (RAM) ({})\n", paramName.c_str());
+		auto msg = "\tUnhandled Bank (RAM) (" + paramName + ")\n";
 		log(msg);
 		return pcgBank;
 	}
