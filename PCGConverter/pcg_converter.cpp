@@ -139,7 +139,13 @@ bool PCG_Converter::retrieveGMData()
 		return str.substr(0, strEnd + 1);
 	};
 
-	struct GMPreset {
+	struct GMPreset
+	{
+		GMPreset(std::string&& inPresetName, int inDataOffset)
+			: presetName(std::move(inPresetName))
+			, dataOffset(inDataOffset)
+		{}
+
 		std::string presetName;
 		int dataOffset = 0;
 	};
@@ -153,7 +159,7 @@ bool PCG_Converter::retrieveGMData()
 	while (currentOffset < fileSize)
 	{
 		auto presetName = std::string(ptr, 16);
-		gmPresetsInfo.emplace_back(presetName, currentOffset);
+		gmPresetsInfo.emplace_back(std::string(presetName), currentOffset);
 
 		if (std::find(kDrumKitNames.begin(), kDrumKitNames.end(), removeStrSpaces(presetName)) != kDrumKitNames.end())
 		{
@@ -376,7 +382,7 @@ struct sixteenBits { short d : 16; };
 template<typename S, typename T>
 T convertOddValue(T val)
 {
-	S temp = static_cast<S>(val);
+	S temp { val };
 	return static_cast<T>(temp.d);
 }
 
@@ -1249,7 +1255,7 @@ void PCG_Converter::patchCombiToStream(int bankId, int presetId, const std::stri
 		}
 
 		auto timberBankName = Helpers::getVSTProgramBankName(prog.bank, m_targetModel);
-		timbersToWrite.emplace_back(timberBankName, prog.program, programName);
+		timbersToWrite.emplace_back(std::move(timberBankName), prog.program, std::string(programName));
 
 		iTimber++;
 	}

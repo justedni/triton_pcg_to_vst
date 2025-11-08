@@ -15,6 +15,13 @@ class PCG_Converter;
 
 struct BankSelection
 {
+    BankSelection(const std::string& inSrcBank, QComboBox* inCombo, QLabel* inLabel, int inTargetBankId)
+        : srcBank(inSrcBank)
+        , targetCombo(inCombo)
+        , label(inLabel)
+        , targetBankId(inTargetBankId)
+    {}
+
     std::string srcBank;
     QComboBox* targetCombo = nullptr;
     QLabel* label = nullptr;

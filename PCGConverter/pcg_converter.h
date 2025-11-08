@@ -16,6 +16,12 @@ enum class EVarType : uint8_t { Signed, Unsigned };
 
 struct Byte
 {
+	Byte(int inOffset, int inBitStart, int inBitEnd)
+		: offset(inOffset)
+		, bit_start(inBitStart)
+		, bit_end(inBitEnd)
+	{}
+
 	int offset;
 	int bit_start;
 	int bit_end;
@@ -61,6 +67,13 @@ public:
 
 	struct ProgParam
 	{
+		ProgParam() = default;
+
+		ProgParam(std::string&& inKey, int inValue)
+			: key(std::move(inKey))
+			, value(inValue)
+		{}
+
 		std::string key;
 		int value = 0;
 	};
@@ -116,6 +129,12 @@ private:
 
 	struct Timber
 	{
+		Timber(std::string&& inBankName, int inProgramId, std::string&& inProgramName)
+			: bankName(std::move(inBankName))
+			, programId(inProgramId)
+			, programName(std::move(inProgramName))
+		{}
+
 		std::string bankName;
 		int programId = 0;
 		std::string programName;
@@ -156,6 +175,12 @@ private:
 
 	struct GMBankData
 	{
+		GMBankData(uint8_t inBankId, uint8_t inProgramId, int inDataOffset)
+			: bankId(inBankId)
+			, programId(inProgramId)
+			, dataOffset(inDataOffset)
+		{}
+
 		uint8_t bankId;
 		uint8_t programId;
 		int dataOffset = 0;

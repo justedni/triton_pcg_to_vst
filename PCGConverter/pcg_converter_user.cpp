@@ -1,6 +1,5 @@
 #include "pcg_converter.h"
 #include <iostream>
-#include <format>
 
 std::vector<TritonStruct> PCG_Converter::arpeggiator_global_conversions = {
 	{ ""					, "octave_motion"	, 16, 0, 1, EVarType::Unsigned },
