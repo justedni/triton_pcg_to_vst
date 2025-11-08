@@ -382,7 +382,8 @@ struct sixteenBits { short d : 16; };
 template<typename S, typename T>
 T convertOddValue(T val)
 {
-	S temp { val };
+	S temp;
+	temp.d = val;
 	return static_cast<T>(temp.d);
 }
 
