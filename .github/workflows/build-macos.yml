@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-13
     
     steps:
     - name: Checkout code with submodules
@@ -32,7 +32,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.3
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
     
     - name: Build CLI target
       run: |
