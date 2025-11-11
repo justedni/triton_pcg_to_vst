@@ -43,7 +43,12 @@ jobs:
       run: |
         cd build
         cmake --build . --config Release --target PCGToVST_gui
-    
+
+    - name: Create DMG for GUI
+      run: |
+        cd build
+        macdeployqt PCGToVST_gui.app -dmg
+
     - name: Package CLI application
       run: |
         mkdir -p deploy-cli
@@ -53,17 +58,11 @@ jobs:
         fi
         chmod +x deploy-cli/PCGToVST_cli
     
-    - name: Package GUI application
+    - name: Package GUI DMG
       run: |
         mkdir -p deploy-gui
 
-        if [ -d "build/PCGToVST_gui.app" ]; then
-          cp -r build/PCGToVST_gui.app deploy-gui/
-        fi
-
-        cd build
-        macdeployqt PCGToVST_gui.app -dmg
-        cp PCGToVST_gui.dmg ../deploy-gui/
+        cp build/PCGToVST_gui.dmg deploy-gui/
 
     - name: Upload macOS CLI artifact
       uses: actions/upload-artifact@v4
