@@ -1,8 +1,11 @@
 # Triton/Triton Extreme PCG to VST patch
 
-![Windows](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-windows.yml/badge.svg)
-![macOS](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-macos.yml/badge.svg)
-![Linux](https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-linux.yml/badge.svg)
+<p align="left">
+<a href="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-windows.yml?query=event%3Apush"><img src="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-windows.yml/badge.svg" /></a>
+<a href="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-macos.yml?query=event%3Apush"><img src="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-macos.yml/badge.svg" /></a>
+<a href="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-linux.yml?query=event%3Apush"><img src="https://github.com/justedni/triton_pcg_to_vst/actions/workflows/build-linux.yml/badge.svg" /></a>
+</p>
+
 
 The tool is finished! Thanks everyone for your patience! (please check the "Releases" section to download Windows executables)
 

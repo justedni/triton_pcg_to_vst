@@ -13,6 +13,17 @@
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#elif __APPLE__
+#include <mach-o/dyld.h>
+#include <libgen.h>
+#else
+#include <unistd.h>
+#include <linux/limits.h>
+#endif
+
+
 std::vector<std::string> PCG_Converter::vst_bank_letters = { "A", "B", "C", "D" };
 std::map<std::string, int> PCG_Converter::m_mapProgram_keyToId;
 std::map<std::string, int> PCG_Converter::m_mapCombi_keyToId;
@@ -53,6 +64,8 @@ PCG_Converter::PCG_Converter(const PCG_Converter& other, const std::string destF
 {
 	m_dictProgParams = other.m_dictProgParams;
 	m_dictCombiParams = other.m_dictCombiParams;
+	m_factoryPcg = other.m_factoryPcg;
+	m_mappedGMInfo = other.m_mappedGMInfo;
 }
 
 template<typename T>
@@ -63,14 +76,42 @@ T readBytes(std::ifstream& stream)
 	return a;
 }
 
+namespace fs = std::filesystem;
+fs::path getDataPath()
+{
+	fs::path exePath;
+
+#ifdef _WIN32
+	char buffer[MAX_PATH];
+	GetModuleFileNameA(NULL, buffer, MAX_PATH);
+	exePath = fs::path(buffer);
+#elif __APPLE__
+	char buffer[1024];
+	uint32_t size = sizeof(buffer);
+	_NSGetExecutablePath(buffer, &size);
+	exePath = fs::canonical(fs::path(buffer));
+#else
+	exePath = fs::read_symlink("/proc/self/exe");
+#endif
+
+	fs::path exeDir = exePath.parent_path();
+
+#ifdef __APPLE__
+	return exeDir.parent_path() / "Resources" / "Data";
+#else
+	return exeDir / "Data";
+#endif
+}
+
 bool PCG_Converter::retrieveTemplatesData()
 {
-	auto parse = [&](std::string path, auto& target)
+	auto parse = [&](std::string filename, auto& target)
 	{
-		std::ifstream ifs(path);
+		auto filePath = getDataPath() / filename;
+		std::ifstream ifs(filePath);
 		if (!ifs.is_open())
 		{
-			auto errMsg = "Critical error: Template" + path + "not found!!\n";
+			auto errMsg = "Critical error: Template" + filePath.string() + "not found!!\n";
 			error(errMsg);
 			return false;
 		}
@@ -83,11 +124,11 @@ bool PCG_Converter::retrieveTemplatesData()
 	};
 
 	rapidjson::Document templateProgDoc;
-	if (!parse("Data\\PatchTemplate_Program.patch", templateProgDoc))
+	if (!parse("PatchTemplate_Program.patch", templateProgDoc))
 		return false;
 
 	rapidjson::Document templateCombiDoc;
-	if (!parse("Data\\PatchTemplate_Combi.patch", templateCombiDoc))
+	if (!parse("PatchTemplate_Combi.patch", templateCombiDoc))
 		return false;
 
 	static bool initIdMaps = true;
@@ -117,7 +158,8 @@ bool PCG_Converter::retrieveGMData()
 	if (!m_mappedGMInfo.empty())
 		return true;
 
-	std::ifstream file("Data\\Factory_GM_Programs.bin", std::ios::in | std::ios::binary | std::ios::ate);
+	auto filePath = getDataPath() / "Factory_GM_Programs.bin";
+	std::ifstream file(filePath, std::ios::in | std::ios::binary | std::ios::ate);
 	if (!file.is_open())
 	{
 		error("Critical error: Factory_GM_Programs data not found!!\n");
@@ -195,13 +237,15 @@ bool PCG_Converter::retrieveGMData()
 
 bool PCG_Converter::retrieveFactoryPCG()
 {
-	EnumKorgModel model;
-	KorgPCG* pcg = nullptr;
+	auto filePath = getDataPath();
 
 	if (m_pcg->model == EnumKorgModel::KORG_TRITON_EXTREME)
-		pcg = LoadTritonPCG("Data\\Factory_TritonExtreme.PCG", model);
+		filePath /= "Factory_TritonExtreme.PCG";
 	else
-		pcg = LoadTritonPCG("Data\\Factory_Triton.PCG", model);
+		filePath /= "Factory_Triton.PCG";
+
+	EnumKorgModel model;
+	KorgPCG* pcg = LoadTritonPCG(filePath.string().c_str(), model);
 
 	if (!pcg)
 	{
