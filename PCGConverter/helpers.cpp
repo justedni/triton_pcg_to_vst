@@ -146,21 +146,18 @@ void Helpers::createFolder(const std::string& path)
 
 std::string Helpers::createSubfolders(const std::string& destFolder, const std::string& subFolder, const std::string& bankLetter)
 {
-	createFolder(destFolder);
+	namespace fs = std::filesystem;
+	fs::path basePath(destFolder);
 
-	auto basePath = destFolder;
-	if (!basePath.empty() && *basePath.rbegin() != '\\')
-		basePath += '\\';
+	createFolder(basePath.string());
 
-	auto combiFolder = basePath + "\\" + subFolder;
-	createFolder(combiFolder);
+	fs::path combiFolder = basePath / subFolder;
+	createFolder(combiFolder.string());
 
-	std::ostringstream oss;
-	oss << basePath << subFolder << "\\USER-" << bankLetter << "\\";
-	auto userFolder = oss.str();
-	createFolder(userFolder);
+	fs::path userFolder = combiFolder / ("USER-" + bankLetter);
+	createFolder(userFolder.string());
 
-	return userFolder;
+	return userFolder.string() + "/";
 }
 
 bool Helpers::isIgnoredParam(const std::string& paramName)
